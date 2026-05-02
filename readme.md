@@ -31,7 +31,7 @@ Survey the cosmos, develop warp drive theory, and construct a Colony Ship. Build
 - **Prestige / Colony Ship Launch** — resets your run, carries cross-branch knowledge forward, and applies a permanent 1.5x production bonus. Each run lands on a new real exoplanet.
 - **Legacy Points** accumulate across runs
 - **Offline progress** capped at 8 hours with randomized Dream Events that apply bonuses or penalties
-- **Story ticker** — narrative events trigger as you hit milestones, with ambient colony comms chatter in between
+- **Story ticker** — narrative events trigger as you hit milestones, with ambient colony comms chatter in between. Click the **Log** button on any ticker to open the full transmission history.
 - **Milestone cosmetics** — the UI accent color and header badges shift as you hit major milestones
 - **Pause** — blurs the screen and freezes all timers and production
 - **Time-to-afford** counters on all buildings and upgrades
@@ -129,7 +129,15 @@ Features planned for future runs:
 
 ---
 
-## Contact / Support
+## Changelog
+
+### v0.2
+- Log button now opens a modal overlay showing full comms and story history
+- Tab labels corrected to full names (Knowledge, Achievements)
+- Support email updated to spacebaserace@gmail.com
+
+### v0.1
+- Initial release
 
 Found a bug or have a feature idea? Email us:
 
