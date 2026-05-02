@@ -1,215 +1,233 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Space Base Race</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#080d1a;color:#c8d8f0;font-family:system-ui,sans-serif;min-height:100vh;}
-    #root{max-width:720px;margin:0 auto;padding:10px 8px;}
-    textarea,input{font-family:system-ui,sans-serif;}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Space Base Race</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#080d1a;color:#c8d8f0;font-family:system-ui,sans-serif;min-height:100vh;}
+#root{max-width:720px;margin:0 auto;padding:10px 8px;}
+textarea,input{font-family:system-ui,sans-serif;}
+</style>
 </head>
 <body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script type="text/babel" data-presets="react">
+<div id="root"><div style="color:#6f9ec9;padding:40px;text-align:center;font-size:14px;">Loading Space Base Race...</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
+// ── utils ──────────────────────────────────────────────────────────────────
 const FMT = n => {
-  if(n>=1e12)return(n/1e12).toFixed(2)+"T";
-  if(n>=1e9)return(n/1e9).toFixed(2)+"B";
-  if(n>=1e6)return(n/1e6).toFixed(2)+"M";
-  if(n>=1e3)return(n/1e3).toFixed(2)+"K";
+  if (n >= 1e12) return (n/1e12).toFixed(2) + "T";
+  if (n >= 1e9)  return (n/1e9).toFixed(2)  + "B";
+  if (n >= 1e6)  return (n/1e6).toFixed(2)  + "M";
+  if (n >= 1e3)  return (n/1e3).toFixed(2)  + "K";
   return Math.floor(n).toString();
 };
 const FMTT = s => {
-  if(!isFinite(s)||s<0)return "inf";
-  if(s<60)return Math.ceil(s)+"s";
-  if(s<3600)return Math.ceil(s/60)+"m";
-  return (s/3600).toFixed(1)+"h";
+  if (!isFinite(s) || s < 0) return "inf";
+  if (s < 60)   return Math.ceil(s) + "s";
+  if (s < 3600) return Math.ceil(s/60) + "m";
+  return (s/3600).toFixed(1) + "h";
 };
-function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
-function timeToAfford(res,prod,cost){
-  const w=Object.entries(cost).map(([k,v])=>{const n=v-(res[k]||0);if(n<=0)return 0;const r=prod[k]||0;return r<=0?Infinity:n/r;});
-  const mx=Math.max(...w);return isFinite(mx)?mx:null;
-}
-const canAffordWith=(res,costs)=>Object.entries(costs).every(([k,v])=>(res[k]||0)>=v);
-const initRes=()=>({energy:0,minerals:0,research:0,population:0,fuel:0});
-const initBuildings=()=>({});
-
-const RES={
-  energy:    {label:"Energy",     icon:"⚡",color:"#e6a817"},
-  minerals:  {label:"Minerals",   icon:"⛏", color:"#7c9e6f"},
-  research:  {label:"Research",   icon:"🔬",color:"#6f9ec9"},
-  population:{label:"Population", icon:"👥",color:"#b07ec9"},
-  fuel:      {label:"Fuel",       icon:"⛽",color:"#e06060"},
+const polar = (cx, cy, r, deg) => {
+  const a = (deg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
 };
+const timeToAfford = (res, prod, cost) => {
+  const w = Object.entries(cost).map(([k, v]) => {
+    const n = v - (res[k] || 0);
+    if (n <= 0) return 0;
+    const r = prod[k] || 0;
+    return r <= 0 ? Infinity : n / r;
+  });
+  const mx = Math.max(...w);
+  return isFinite(mx) ? mx : null;
+};
+const canAffordWith = (res, costs) => Object.entries(costs).every(([k, v]) => (res[k] || 0) >= v);
+const initRes      = () => ({ energy:0, minerals:0, research:0, population:0, fuel:0 });
+const initBuildings = () => ({});
 
-const BUILDINGS={
-  solar:      {id:"solar",      layer:1,name:"Solar Array",      res:"energy",    base:12,  prod:{energy:0.5},                          tier:1,desc:"Photovoltaic arrays soaking up twin-star radiation."},
-  drill:      {id:"drill",      layer:1,name:"Drill Rig",        res:"minerals",  base:12,  prod:{minerals:0.5},                        tier:1,desc:"Bores deep into the crust for raw ore."},
-  lab:        {id:"lab",        layer:1,name:"Research Lab",     res:"research",  base:12,  prod:{research:0.5},                        tier:1,desc:"Staffed 24/7 by slightly caffeinated scientists."},
-  habitat:    {id:"habitat",    layer:1,name:"Habitat Dome",     res:"population",base:12,  prod:{population:0.5},                      tier:1,desc:"Pressurized living quarters for colonists."},
-  refinery:   {id:"refinery",   layer:1,name:"Refinery",         res:"energy",    base:120, prod:{energy:3,minerals:2},                 tier:2,cost:{energy:80,minerals:80},        desc:"Plasma-smelts ore into usable energy."},
-  medbay:     {id:"medbay",     layer:1,name:"Med Bay",          res:"population",base:150, prod:{research:2,population:3},             tier:2,cost:{research:100,population:100},  desc:"Heals colonists and generates medical data."},
-  greenhouse: {id:"greenhouse", layer:1,name:"Greenhouse",       res:"population",base:200, prod:{population:1,research:0.5},           tier:2,cost:{energy:120,population:80},     desc:"Hydroponic farms sustaining colony growth."},
-  terraformer:{id:"terraformer",layer:1,name:"Terraformer",      res:"minerals",  base:600, prod:{energy:5,minerals:5,research:5},      tier:3,cost:{energy:400,minerals:400,research:300},desc:"Reshapes planetary geology. Unlocks orbital tier."},
-  launchpad:  {id:"launchpad",  layer:2,name:"Launch Pad",       res:"fuel",      base:200, prod:{fuel:0.5},                            tier:1,cost:{energy:150,minerals:150},      desc:"Surface-to-orbit mass driver."},
-  orbitallab: {id:"orbitallab", layer:2,name:"Orbital Lab",      res:"research",  base:250, prod:{research:1.5},                        tier:1,cost:{research:150,fuel:50},         desc:"Zero-gravity research station in low orbit."},
-  solarcollector:{id:"solarcollector",layer:2,name:"Solar Collector",res:"energy",base:280,prod:{energy:2},                            tier:1,cost:{energy:200,minerals:100},      desc:"Unobstructed solar collection above atmosphere."},
-  oreprocessor:{id:"oreprocessor",layer:2,name:"Ore Processor",  res:"minerals",  base:300, prod:{minerals:2,fuel:0.3},                 tier:2,cost:{minerals:200,fuel:80},         desc:"Orbital smelter processing asteroid ore."},
-  cryobay:    {id:"cryobay",    layer:2,name:"Cryo Bay",         res:"population",base:350, prod:{population:1,fuel:0.5},               tier:2,cost:{population:200,research:150},  desc:"Suspended-animation chambers for deep space crews."},
-  commandmodule:{id:"commandmodule",layer:2,name:"Command Module",res:"fuel",     base:500, prod:{fuel:1,research:1,energy:1},          tier:2,cost:{energy:300,minerals:300,fuel:200},desc:"Orbital command and coordination hub."},
-  stationdock:{id:"stationdock",layer:2,name:"Station Dock",     res:"fuel",      base:800, prod:{fuel:3,minerals:2,energy:2},          tier:3,cost:{energy:500,minerals:500,fuel:300},desc:"Full orbital docking facility. Unlocks deep space."},
-  probefactory:{id:"probefactory",layer:3,name:"Probe Factory",  res:"research",  base:500, prod:{research:3},                         tier:1,cost:{minerals:400,fuel:200},        desc:"Mass-produces survey probes for system mapping."},
-  warplab:    {id:"warplab",    layer:3,name:"Warp Drive Lab",   res:"fuel",      base:600, prod:{fuel:2,research:2},                   tier:1,cost:{research:400,energy:300},      desc:"Engineers faster-than-light propulsion theory."},
-  shipyard:   {id:"shipyard",   layer:3,name:"Shipyard",         res:"fuel",      base:800, prod:{fuel:3,minerals:1},                   tier:2,cost:{minerals:600,energy:400,fuel:300},desc:"Constructs deep space vessels frame by frame."},
-  deepspaceantenna:{id:"deepspaceantenna",layer:3,name:"Deep Space Antenna",res:"research",base:700,prod:{research:4},tier:2,cost:{research:500,minerals:400},desc:"Reaches across light-years for faint signals."},
-  colonyship: {id:"colonyship", layer:3,name:"Colony Ship",      res:"fuel",      base:5000,prod:{},                                   tier:4,cost:{energy:3000,minerals:3000,research:3000,fuel:2000,population:1000},desc:"WIN: Launch to a new world and begin again."},
+// ── data ───────────────────────────────────────────────────────────────────
+const RES = {
+  energy:    { label:"Energy",     icon:"⚡", color:"#e6a817" },
+  minerals:  { label:"Minerals",   icon:"⛏",  color:"#7c9e6f" },
+  research:  { label:"Research",   icon:"🔬", color:"#6f9ec9" },
+  population:{ label:"Population", icon:"👥", color:"#b07ec9" },
+  fuel:      { label:"Fuel",       icon:"⛽", color:"#e06060" },
 };
 
-const UPGRADES=[
-  {id:"u1", layer:1,name:"Solar Panels v2",    req:{energy:50},   cost:{energy:100},            effect:"2x energy production",       tier:1},
-  {id:"u2", layer:1,name:"Diamond Drill Bit",  req:{minerals:50}, cost:{minerals:100},          effect:"2x minerals production",     tier:1},
-  {id:"u3", layer:1,name:"AI Assistant",       req:{research:50}, cost:{research:100},          effect:"2x research production",     tier:1},
-  {id:"u4", layer:1,name:"Colony Act",         req:{population:50},cost:{population:100},       effect:"2x population growth",       tier:1},
-  {id:"u5", layer:1,name:"Power Grid",         req:{energy:300,minerals:200},cost:{energy:300,minerals:200},  effect:"1.5x energy+minerals",tier:2},
-  {id:"u6", layer:1,name:"Neural Network",     req:{research:300,population:200},cost:{research:300,population:200},effect:"1.5x research+pop",tier:2},
-  {id:"u7", layer:1,name:"Quantum Core",       req:{energy:800,minerals:800,research:800},cost:{energy:800,minerals:800,research:800},effect:"2x all surface production",tier:3},
-  {id:"u8", layer:2,name:"Ion Drives",         req:{fuel:100},    cost:{fuel:200,research:150}, effect:"2x fuel production",         tier:1},
-  {id:"u9", layer:2,name:"Zero-G Research",    req:{research:200,fuel:50},cost:{research:300,fuel:100},effect:"2x orbital research", tier:1},
-  {id:"u10",layer:2,name:"Orbital Automation", req:{fuel:300,minerals:200},cost:{fuel:300,minerals:200},effect:"1.5x all orbital prod",tier:2},
-  {id:"u11",layer:2,name:"Micro-gravity Forge",req:{minerals:500,fuel:200},cost:{minerals:500,fuel:300},effect:"3x ore processor",  tier:2},
-  {id:"u12",layer:2,name:"Cryo-stasis Boost",  req:{population:400,fuel:200},cost:{population:400,fuel:200},effect:"2x cryo bay",  tier:2},
-  {id:"u13",layer:3,name:"Warp Field Theory",  req:{research:800,fuel:500},cost:{research:800,fuel:500},effect:"3x warp lab",      tier:1},
-  {id:"u14",layer:3,name:"Autonomous Probes",  req:{research:1000},cost:{research:1000,fuel:400},effect:"3x probe factory",        tier:1},
-  {id:"u15",layer:3,name:"Starcore Drive",      req:{fuel:2000,energy:1000},cost:{fuel:2000,energy:1000,minerals:1000},effect:"All fuel prod x2, colony ship -30%",tier:2},
-];
-
-const KNOWLEDGE=[
-  {id:"k0",  name:"Colonial Doctrine",   desc:"Someone read the manual.",             cost:{research:40},                          effect:"+15% all production",             branch:"center",   ring:0,angle:0,   requires:[],exclusive:[]},
-  {id:"ke1", name:"Solar Efficiency",    desc:"Panels face sun. 3 months to notice.", cost:{research:80,energy:50},                effect:"Solar Arrays +40%",               branch:"energy",   ring:1,angle:0,   requires:["k0"],exclusive:[]},
-  {id:"ke2", name:"Plasma Conduits",     desc:"Tube go zap. Very efficient.",          cost:{research:160,energy:120},              effect:"Energy click x2.5",               branch:"energy",   ring:2,angle:0,   requires:["ke1"],exclusive:[]},
-  {id:"ke3", name:"Dyson Fragment",      desc:"A piece of a sphere. Start small.",     cost:{research:500,energy:400},              effect:"Energy production x4",            branch:"energy",   ring:3,angle:0,   requires:["ke2"],exclusive:["km3","kr3","kp3"]},
-  {id:"km1", name:"Core Sampling",       desc:"Drill first. Ask questions never.",     cost:{research:80,minerals:50},              effect:"Drill Rigs +40%",                 branch:"minerals", ring:1,angle:72,  requires:["k0"],exclusive:[]},
-  {id:"km2", name:"Nano-Excavators",     desc:"Tiny robots. Big mining. Adorable.",    cost:{research:160,minerals:120},            effect:"Minerals click x2.5",             branch:"minerals", ring:2,angle:72,  requires:["km1"],exclusive:[]},
-  {id:"km3", name:"Asteroid Siphon",     desc:"Why mine planets when space is free?",  cost:{research:500,minerals:400},            effect:"Minerals production x4",          branch:"minerals", ring:3,angle:72,  requires:["km2"],exclusive:["ke3","kr3","kp3"]},
-  {id:"kr1", name:"Peer Review",         desc:"Scientists read each other's work.",    cost:{research:100},                         effect:"Labs +40% output",                branch:"research", ring:1,angle:144, requires:["k0"],exclusive:[]},
-  {id:"kr2", name:"Quantum Computing",   desc:"Yes and no. Until billing.",            cost:{research:220},                         effect:"Research click x2.5",             branch:"research", ring:2,angle:144, requires:["kr1"],exclusive:[]},
-  {id:"kr3", name:"Unified Field Theory",desc:"Everything connected. So are costs.",   cost:{research:800},                         effect:"All production x2.5",             branch:"research", ring:3,angle:144, requires:["kr2"],exclusive:["ke3","km3","kp3"]},
-  {id:"kp1", name:"Ergonomic Chairs",    desc:"Morale up. Back pain down.",            cost:{research:80,population:50},            effect:"Habitats +40%",                   branch:"population",ring:1,angle:216,requires:["k0"],exclusive:[]},
-  {id:"kp2", name:"Cloning Vats",        desc:"More Dave. Always more Dave.",          cost:{research:160,population:120},          effect:"Population click x2.5",           branch:"population",ring:2,angle:216,requires:["kp1"],exclusive:[]},
-  {id:"kp3", name:"Hive Mind Protocol",  desc:"We are one. Mostly Dave.",              cost:{research:500,population:400},          effect:"Population x4, all bldgs +20%",   branch:"population",ring:3,angle:216,requires:["kp2"],exclusive:["ke3","km3","kr3"]},
-  {id:"kf1", name:"Combustion Theory",   desc:"Fire goes up. Rocket goes up. Science.",cost:{research:200,fuel:50},                 effect:"Launch Pads +50%",                branch:"fuel",     ring:1,angle:288, requires:["k0"],exclusive:[]},
-  {id:"kf2", name:"Antimatter Trace",    desc:"Found some. Contained it. Mostly.",     cost:{research:400,fuel:200,energy:200},     effect:"Fuel prod x2, orbital x1.5",      branch:"fuel",     ring:2,angle:288, requires:["kf1"],exclusive:[]},
-  {id:"kf3", name:"Warp Bubble Theory",  desc:"Fold space. Skip the commute.",         cost:{research:800,fuel:600,energy:400},     effect:"All fuel bldgs x3, warp lab x2",  branch:"fuel",     ring:3,angle:288, requires:["kf2"],exclusive:["ke3","km3","kr3","kp3"]},
-  {id:"cx_em", name:"Plasma Drill",      desc:"Drill plus plasma equals great holes.",  cost:{research:300,energy:200,minerals:200}, effect:"Refinery x3, E+M click x2",       branch:"cross_em", ring:2,angle:36,  requires:["ke1","km1"],exclusive:[],crossBridge:true},
-  {id:"cx_mr", name:"Xenoarchaeology",   desc:"Dug up something ancient. Probably fine.",cost:{research:350,minerals:200},           effect:"M+R buildings x2",                branch:"cross_mr", ring:2,angle:108, requires:["km1","kr1"],exclusive:[],crossBridge:true},
-  {id:"cx_rp", name:"Neural Colony",     desc:"Dave uploaded. Dave is everywhere.",     cost:{research:350,population:200},          effect:"Med Bay x3, R+P click x2",        branch:"cross_rp", ring:2,angle:180, requires:["kr1","kp1"],exclusive:[],crossBridge:true},
-  {id:"cx_pf", name:"Bio-Reactors",      desc:"Waste to energy. Ew but efficient.",    cost:{research:300,population:150,fuel:100}, effect:"Pop generates fuel+energy",       branch:"cross_pf", ring:2,angle:252, requires:["kp1","kf1"],exclusive:[],crossBridge:true},
-  {id:"cx_fe", name:"Solar Sails",       desc:"Harness stellar wind for free thrust.",  cost:{research:300,fuel:150,energy:150},     effect:"Solar collectors x2, fuel x1.5",  branch:"cross_fe", ring:2,angle:324, requires:["kf1","ke1"],exclusive:[],crossBridge:true},
-  {id:"cx_em2",name:"Stellar Forge",     desc:"A star in a box. HR approved.",         cost:{research:700,energy:500,minerals:500}, effect:"E+M production x3",               branch:"cross_em", ring:3,angle:36,  requires:["cx_em","ke2","km2"],exclusive:[]},
-  {id:"cx_mr2",name:"Living Bedrock",    desc:"The rocks have opinions.",              cost:{research:700,minerals:400,population:200},effect:"M+R x3, pop per drill",         branch:"cross_mr", ring:3,angle:108, requires:["cx_mr","km2","kr2"],exclusive:[]},
-  {id:"cx_rp2",name:"Singularity Engine",desc:"The machine thinks. Hope it likes us.", cost:{research:1200,population:600,energy:400},effect:"ALL surface production x3",     branch:"cross_rp", ring:3,angle:180, requires:["cx_rp","kr2","kp2"],exclusive:[]},
-  {id:"cx_pf2",name:"Warp Core",         desc:"Space bends. Profits do not. Yet.",     cost:{research:700,fuel:500,population:300}, effect:"All click x4, fuel+pop x3",       branch:"cross_pf", ring:3,angle:252, requires:["cx_pf","kp2","kf2"],exclusive:[]},
-  {id:"cx_fe2",name:"Dyson Swarm",       desc:"Not one sphere. A thousand mirrors.",   cost:{research:900,fuel:600,energy:600},     effect:"Energy+fuel production x4",       branch:"cross_fe", ring:3,angle:324, requires:["cx_fe","kf2","ke2"],exclusive:[]},
-];
-
-const BRANCH_COLOR={energy:"#e6a817",minerals:"#7c9e6f",research:"#6f9ec9",population:"#b07ec9",fuel:"#e06060",cross_em:"#c8a040",cross_mr:"#6faa8a",cross_rp:"#9080c0",cross_pf:"#c07080",cross_fe:"#c0a060",center:"#ffffff"};
-
-const STORY_EVENTS=[
-  {id:"s1", trigger:(b,k,l)=>l>=1&&Object.values(b).reduce((a,v)=>a+v,0)>=5,  title:"First Foothold",       icon:"🏕",text:"The colony has its first five operational structures. Director Vasquez calls it a miracle. The engineers call it Tuesday."},
-  {id:"s2", trigger:(b,k,l)=>(b.drill||0)>=5,                                  title:"Strange Ore",           icon:"💎",text:"Drill Rig 5 hit a vein of something that glows faintly purple. The geologists are excited. Mining continues."},
-  {id:"s3", trigger:(b,k,l)=>k.includes("k0"),                                 title:"The Manual",            icon:"📖",text:"A colonist read the Colonial Operations Manual. Productivity rose 15%. Everyone else is deeply suspicious of her."},
-  {id:"s4", trigger:(b,k,l)=>(b.lab||0)>=3,                                    title:"Anomalous Readings",    icon:"🔭",text:"Lab 3 detected trace biosignatures 40km underground. The lead researcher is now digging herself."},
-  {id:"s5", trigger:(b,k,l)=>k.includes("cx_rp"),                              title:"The Upload",            icon:"🧠",text:"Dave was uploaded to the colony network for efficiency. Dave is now the wifi password. Dave is everywhere. Dave is fine."},
-  {id:"s6", trigger:(b,k,l)=>(b.habitat||0)>=10,                               title:"Growing Colony",        icon:"🏘",text:"The 500th colonist arrived. Her name is Margaret. She immediately formed a complaints committee."},
-  {id:"s7", trigger:(b,k,l)=>(b.terraformer||0)>=1,                            title:"The Planet Responds",   icon:"🌍",text:"One hour after the Terraformer activated, the magnetic field shifted 3 degrees. Dave calls it breathing."},
-  {id:"s8", trigger:(b,k,l)=>l>=2,                                             title:"First Orbit",           icon:"🛸",text:"The first orbital platform achieved stable orbit at 08:42. Dave reported a wifi signal from 400km up. Nobody asked how."},
-  {id:"s9", trigger:(b,k,l)=>l>=2&&(b.orbitallab||0)>=1,                       title:"Zero-G Discovery",      icon:"🧪",text:"In zero gravity, the purple ore becomes transparent and emits a faint tone. Dr. Chen is calling it music."},
-  {id:"s10",trigger:(b,k,l)=>l>=2&&(b.stationdock||0)>=1,                      title:"Station Online",        icon:"🔩",text:"The station dock came online. Three ships docked in the first hour. One was unscheduled and carried a birthday cake for Gerald."},
-  {id:"s11",trigger:(b,k,l)=>k.includes("kf2"),                                title:"Antimatter Incident",   icon:"⚠️",text:"The antimatter containment unit briefly destabilized. The lab is now slightly transparent. The physics team calls this fascinating."},
-  {id:"s12",trigger:(b,k,l)=>l>=3,                                             title:"Into the Deep",         icon:"🌌",text:"Deep space probes deployed. One system is broadcasting a weather report for a planet we have not named yet."},
-  {id:"s13",trigger:(b,k,l)=>l>=3&&(b.warplab||0)>=1,                          title:"Warp Signature",        icon:"〰️",text:"First microscale spacetime fold. Duration: 0.003 seconds. The chamber emerged 4 centimeters from its start. Dave felt it."},
-  {id:"s14",trigger:(b,k,l)=>l>=3&&(b.shipyard||0)>=3,                         title:"The Shape of Tomorrow", icon:"🚀",text:"Commander Yuen said quietly: I think we are actually going to do this. Nobody disagreed. Not even Margaret."},
-  {id:"s15",trigger:(b,k,l)=>(b.colonyship||0)>=1,                             title:"Launch Day",            icon:"🌠",text:"The colony ship sits at dock. Crew of 1,200 in cryo-sleep. Dave is the navigation AI. Dave is extremely excited."},
-];
-
-const AMBIENT_EVENTS=[
-  {icon:"📻",text:"Comms chatter: Has anyone seen Dave? Dave is everywhere. That is not an answer."},
-  {icon:"⚠️",text:"Maintenance notice: Drill Rig 7 is making a new noise. Engineering classifies it as probably fine."},
-  {icon:"🍵",text:"The cafeteria introduced a new protein blend. Colonist reviews range from acceptable to what is this."},
-  {icon:"🌡",text:"Surface temperature anomaly in sector 4. Geologists are excited. Everyone else is nervous."},
-  {icon:"🛰",text:"A passing survey drone caught something on its lower cameras. No comment yet."},
-  {icon:"💤",text:"Night shift report: all systems nominal. Dave hummed something in the ventilation at 3am."},
-  {icon:"📦",text:"Supply drone arrived 6 hours late. Contents: 400 units soy protein and a birthday card for Gerald."},
-  {icon:"🔧",text:"Engineering completed routine maintenance. Three walls are now a different color. Intentional, they say."},
-  {icon:"🌌",text:"A new star appeared in grid 7-C. It was not there yesterday. Astronomy is looking into it."},
-  {icon:"🛸",text:"Orbital crew reports lights below the cloud layer on the far continent. Unexplained. Logged."},
-  {icon:"📊",text:"Quarterly productivity report: everything up. Dave influence expanding beyond anticipated parameters."},
-  {icon:"⛽",text:"Fuel reserves at 94%. The smell from the launch pad is, according to engineering, totally normal."},
-];
-
-const DREAM_EVENTS=[
-  {id:"d1",name:"The Quiet Drift",       desc:"Colony ran smoothly. Nothing remarkable.",       bonus:{val:1.0},              flavor:"Nothing happened. Gloriously nothing."},
-  {id:"d2",name:"Solar Flare",           desc:"Arrays went into overdrive during a flare.",     bonus:{val:1.4,res:"energy"}, flavor:"Energy caches are overflowing."},
-  {id:"d3",name:"Mineral Rush",          desc:"Drills struck a rich vein overnight.",            bonus:{val:1.3,res:"minerals"},flavor:"Your miners look very pleased."},
-  {id:"d4",name:"Research Breakthrough", desc:"A junior scientist had a eureka moment at 3am.",  bonus:{val:1.5,res:"research"},flavor:"The whiteboards are covered in equations."},
-  {id:"d5",name:"Micrometeorite Storm",  desc:"Micro-impacts knocked some systems offline.",     bonus:{val:0.7},              flavor:"Minor hull damage. Major paperwork."},
-  {id:"d6",name:"Colonial Feast",        desc:"Someone found the emergency ration chocolate.",   bonus:{val:1.2,res:"population"},flavor:"The colony is suspiciously cheerful."},
-  {id:"d7",name:"Fuel Cache Found",      desc:"Probes located a dense fuel deposit nearby.",     bonus:{val:1.6,res:"fuel"},   flavor:"The fuel gauges look very happy."},
-  {id:"d8",name:"The Long Night",        desc:"A dust storm blanketed the solar arrays.",        bonus:{val:0.8},              flavor:"The dust has a lovely purple hue, at least."},
-];
-
-const MILESTONES_DEF=[
-  {id:"m1",name:"First Settlement",  check:(b,l,k)=>Object.values(b).reduce((x,v)=>x+v,0)>=10,badge:"🏕",color:"#4a7a4a",desc:"A colony takes root"},
-  {id:"m2",name:"Industrial Age",    check:(b,l,k)=>(b.refinery||0)>=1,                        badge:"⚙️",color:"#8a6a2a",desc:"Heavy industry begins"},
-  {id:"m3",name:"Terraformer",       check:(b,l,k)=>(b.terraformer||0)>=1,                     badge:"🌍",color:"#2a6a5a",desc:"Planet reshaped"},
-  {id:"m4",name:"Orbital Achieved",  check:(b,l,k)=>l>=2,                                      badge:"🛸",color:"#2a4a8a",desc:"Colony reaches orbit"},
-  {id:"m5",name:"Station Commander", check:(b,l,k)=>(b.commandmodule||0)>=1,                   badge:"🔩",color:"#4a4a8a",desc:"Orbital command established"},
-  {id:"m6",name:"Deep Space Pioneer",check:(b,l,k)=>l>=3,                                      badge:"🌌",color:"#1a2a6a",desc:"The void beckons"},
-  {id:"m7",name:"Singularity",       check:(b,l,k)=>k.includes("cx_rp2"),                     badge:"🤖",color:"#6a2a2a",desc:"The machine wakes"},
-  {id:"m8",name:"Colony Ship Ready", check:(b,l,k)=>(b.colonyship||0)>=1,                      badge:"🚀",color:"#6a1a1a",desc:"Humanity leaps to the stars"},
-];
-
-const ACHIEVEMENTS=[
-  {id:"a1", name:"First Light",         desc:"Generate 100 Energy",                  check:(r)=>r.energy>=100},
-  {id:"a2", name:"Rock Bottom",         desc:"Generate 100 Minerals",                check:(r)=>r.minerals>=100},
-  {id:"a3", name:"Eureka!",             desc:"Generate 100 Research",                check:(r)=>r.research>=100},
-  {id:"a4", name:"Crowded House",       desc:"Generate 100 Population",              check:(r)=>r.population>=100},
-  {id:"a5", name:"Fueled Up",           desc:"Generate 100 Fuel",                    check:(r)=>r.fuel>=100},
-  {id:"a6", name:"Builder",             desc:"Own 10 buildings total",               check:(r,b)=>Object.values(b).reduce((a,v)=>a+v,0)>=10},
-  {id:"a7", name:"Researcher",          desc:"Buy 3 upgrades",                       check:(r,b,u)=>u.length>=3},
-  {id:"a8", name:"We Have Liftoff",     desc:"Reach Layer 2 Orbital",               check:(r,b,u,p,cl,k,sl,t,l)=>l>=2},
-  {id:"a9", name:"Into the Void",       desc:"Reach Layer 3 Deep Space",            check:(r,b,u,p,cl,k,sl,t,l)=>l>=3},
-  {id:"a10",name:"Prestige Pioneer",    desc:"Launch colony ship once",              check:(r,b,u,p)=>p>=1},
-  {id:"a11",name:"Serial Colonist",     desc:"Launch colony ship 3 times",           check:(r,b,u,p)=>p>=3},
-  {id:"a12",name:"Mineral Hoarder",     desc:"Accumulate 10,000 Minerals",           check:(r)=>r.minerals>=10000},
-  {id:"a13",name:"One Small Click",     desc:"Click 100 times",                      check:(r,b,u,p,cl)=>cl>=100},
-  {id:"a14",name:"Carpal Tunnel",       desc:"Click 1,000 times",                    check:(r,b,u,p,cl)=>cl>=1000},
-  {id:"a15",name:"Dave? Is That You?",  desc:"Unlock Neural Colony",                 check:(r,b,u,p,cl,k)=>k.includes("cx_rp")},
-  {id:"a16",name:"Planet Reshaper",     desc:"Build a Terraformer",                  check:(r,b)=>(b.terraformer||0)>=1},
-  {id:"a17",name:"Are We There Yet?",   desc:"1 million of any resource",            check:(r)=>Object.values(r).some(v=>v>=1e6)},
-  {id:"a18",name:"No Refunds",          desc:"Sell a building",                      check:(r,b,u,p,cl,k,sl)=>sl>=1},
-  {id:"a19",name:"Speed Runner",        desc:"Colony ship in under 60 minutes",      check:(r,b,u,p,cl,k,sl,t)=>p>=1&&t<=3600},
-  {id:"a20",name:"Path Finder",         desc:"Unlock a cross-branch node",           check:(r,b,u,p,cl,k)=>["cx_em","cx_mr","cx_rp","cx_pf","cx_fe"].some(x=>k.includes(x))},
-  {id:"a21",name:"Singularity Now",     desc:"Unlock the Singularity Engine",        check:(r,b,u,p,cl,k)=>k.includes("cx_rp2")},
-  {id:"a22",name:"Warp Speed",          desc:"Unlock Warp Bubble Theory",            check:(r,b,u,p,cl,k)=>k.includes("kf3")},
-  {id:"a23",name:"We Are All Dave",     desc:"Unlock Hive Mind Protocol",            check:(r,b,u,p,cl,k)=>k.includes("kp3")},
-];
-const MILESTONE_ACH={a8:"m4",a9:"m6",a10:"m8",a16:"m3"};
-const PLANETS=["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc","HD 40307g","55 Cancri f","Wolf 1061c","Ross 128b","Teegarden b","LHS 1140b"];
-const LAYER_THEME={
-  1:{name:"Surface Colony",    color:"#7c9e6f",bg:"linear-gradient(180deg,#0a1a08 0%,#080d0a 100%)",border:"#2a4a2a",icon:"🌍"},
-  2:{name:"Orbital Station",   color:"#6f9ec9",bg:"linear-gradient(180deg,#080f1a 0%,#050a12 100%)",border:"#1a3a5a",icon:"🛸"},
-  3:{name:"Deep Space Program",color:"#e06060",bg:"linear-gradient(180deg,#150808 0%,#080508 100%)",border:"#3a1a1a",icon:"🌌"},
+const BUILDINGS = {
+  solar:       { id:"solar",       layer:1, name:"Solar Array",       res:"energy",    base:12,   prod:{energy:0.5},                         tier:1, desc:"Photovoltaic arrays soaking up twin-star radiation." },
+  drill:       { id:"drill",       layer:1, name:"Drill Rig",         res:"minerals",  base:12,   prod:{minerals:0.5},                       tier:1, desc:"Bores deep into the crust for raw ore." },
+  lab:         { id:"lab",         layer:1, name:"Research Lab",      res:"research",  base:12,   prod:{research:0.5},                       tier:1, desc:"Staffed 24/7 by slightly caffeinated scientists." },
+  habitat:     { id:"habitat",     layer:1, name:"Habitat Dome",      res:"population",base:12,   prod:{population:0.5},                     tier:1, desc:"Pressurized living quarters for colonists." },
+  refinery:    { id:"refinery",    layer:1, name:"Refinery",          res:"energy",    base:120,  prod:{energy:3,minerals:2},                tier:2, cost:{energy:80,minerals:80},       desc:"Plasma-smelts ore into usable energy." },
+  medbay:      { id:"medbay",      layer:1, name:"Med Bay",           res:"population",base:150,  prod:{research:2,population:3},            tier:2, cost:{research:100,population:100}, desc:"Heals colonists and generates medical data." },
+  greenhouse:  { id:"greenhouse",  layer:1, name:"Greenhouse",        res:"population",base:200,  prod:{population:1,research:0.5},          tier:2, cost:{energy:120,population:80},    desc:"Hydroponic farms sustaining colony growth." },
+  terraformer: { id:"terraformer", layer:1, name:"Terraformer",       res:"minerals",  base:600,  prod:{energy:5,minerals:5,research:5},     tier:3, cost:{energy:400,minerals:400,research:300}, desc:"Reshapes planetary geology. Unlocks orbital tier." },
+  launchpad:   { id:"launchpad",   layer:2, name:"Launch Pad",        res:"fuel",      base:200,  prod:{fuel:0.5},                           tier:1, cost:{energy:150,minerals:150},     desc:"Surface-to-orbit mass driver." },
+  orbitallab:  { id:"orbitallab",  layer:2, name:"Orbital Lab",       res:"research",  base:250,  prod:{research:1.5},                       tier:1, cost:{research:150,fuel:50},        desc:"Zero-gravity research station in low orbit." },
+  solarcollector:{ id:"solarcollector",layer:2,name:"Solar Collector",res:"energy",    base:280,  prod:{energy:2},                           tier:1, cost:{energy:200,minerals:100},     desc:"Unobstructed solar collection above atmosphere." },
+  oreprocessor:{ id:"oreprocessor",layer:2, name:"Ore Processor",     res:"minerals",  base:300,  prod:{minerals:2,fuel:0.3},                tier:2, cost:{minerals:200,fuel:80},        desc:"Orbital smelter processing asteroid ore." },
+  cryobay:     { id:"cryobay",     layer:2, name:"Cryo Bay",          res:"population",base:350,  prod:{population:1,fuel:0.5},              tier:2, cost:{population:200,research:150}, desc:"Suspended-animation chambers for deep space crews." },
+  commandmodule:{ id:"commandmodule",layer:2,name:"Command Module",   res:"fuel",      base:500,  prod:{fuel:1,research:1,energy:1},         tier:2, cost:{energy:300,minerals:300,fuel:200}, desc:"Orbital command and coordination hub." },
+  stationdock: { id:"stationdock", layer:2, name:"Station Dock",      res:"fuel",      base:800,  prod:{fuel:3,minerals:2,energy:2},         tier:3, cost:{energy:500,minerals:500,fuel:300}, desc:"Full orbital docking facility. Unlocks deep space." },
+  probefactory:{ id:"probefactory",layer:3, name:"Probe Factory",     res:"research",  base:500,  prod:{research:3},                         tier:1, cost:{minerals:400,fuel:200},       desc:"Mass-produces survey probes for system mapping." },
+  warplab:     { id:"warplab",     layer:3, name:"Warp Drive Lab",    res:"fuel",      base:600,  prod:{fuel:2,research:2},                  tier:1, cost:{research:400,energy:300},     desc:"Engineers faster-than-light propulsion theory." },
+  shipyard:    { id:"shipyard",    layer:3, name:"Shipyard",          res:"fuel",      base:800,  prod:{fuel:3,minerals:1},                  tier:2, cost:{minerals:600,energy:400,fuel:300}, desc:"Constructs deep space vessels frame by frame." },
+  deepspaceantenna:{ id:"deepspaceantenna",layer:3,name:"Deep Space Antenna",res:"research",base:700,prod:{research:4},tier:2,cost:{research:500,minerals:400}, desc:"Reaches across light-years for faint signals." },
+  colonyship:  { id:"colonyship",  layer:3, name:"Colony Ship",       res:"fuel",      base:5000, prod:{},                                   tier:4, cost:{energy:3000,minerals:3000,research:3000,fuel:2000,population:1000}, desc:"WIN: Launch to a new world and begin again." },
 };
-const COL_BG    ={energy:"#1a1400",minerals:"#0d1a0d",research:"#0d1220",population:"#150d1a",fuel:"#1a0d0d"};
-const COL_BORDER={energy:"#3a2800",minerals:"#1a3a1a",research:"#1a2a40",population:"#2a1a3a",fuel:"#3a1a1a"};
+
+const UPGRADES = [
+  { id:"u1",  layer:1, name:"Solar Panels v2",    req:{energy:50},                              cost:{energy:100},                          effect:"2x energy production",           tier:1 },
+  { id:"u2",  layer:1, name:"Diamond Drill Bit",  req:{minerals:50},                            cost:{minerals:100},                        effect:"2x minerals production",         tier:1 },
+  { id:"u3",  layer:1, name:"AI Assistant",       req:{research:50},                            cost:{research:100},                        effect:"2x research production",         tier:1 },
+  { id:"u4",  layer:1, name:"Colony Act",         req:{population:50},                          cost:{population:100},                      effect:"2x population growth",           tier:1 },
+  { id:"u5",  layer:1, name:"Power Grid",         req:{energy:300,minerals:200},                cost:{energy:300,minerals:200},             effect:"1.5x energy + minerals",         tier:2 },
+  { id:"u6",  layer:1, name:"Neural Network",     req:{research:300,population:200},            cost:{research:300,population:200},         effect:"1.5x research + population",     tier:2 },
+  { id:"u7",  layer:1, name:"Quantum Core",       req:{energy:800,minerals:800,research:800},   cost:{energy:800,minerals:800,research:800},effect:"2x all surface production",      tier:3 },
+  { id:"u8",  layer:2, name:"Ion Drives",         req:{fuel:100},                               cost:{fuel:200,research:150},               effect:"2x fuel production",             tier:1 },
+  { id:"u9",  layer:2, name:"Zero-G Research",    req:{research:200,fuel:50},                   cost:{research:300,fuel:100},               effect:"2x orbital research",            tier:1 },
+  { id:"u10", layer:2, name:"Orbital Automation", req:{fuel:300,minerals:200},                  cost:{fuel:300,minerals:200},               effect:"1.5x all orbital production",    tier:2 },
+  { id:"u11", layer:2, name:"Micro-gravity Forge",req:{minerals:500,fuel:200},                  cost:{minerals:500,fuel:300},               effect:"3x ore processor output",        tier:2 },
+  { id:"u12", layer:2, name:"Cryo-stasis Boost",  req:{population:400,fuel:200},                cost:{population:400,fuel:200},             effect:"2x cryo bay output",             tier:2 },
+  { id:"u13", layer:3, name:"Warp Field Theory",  req:{research:800,fuel:500},                  cost:{research:800,fuel:500},               effect:"3x warp lab output",             tier:1 },
+  { id:"u14", layer:3, name:"Autonomous Probes",  req:{research:1000},                          cost:{research:1000,fuel:400},              effect:"3x probe factory output",        tier:1 },
+  { id:"u15", layer:3, name:"Starcore Drive",      req:{fuel:2000,energy:1000},                  cost:{fuel:2000,energy:1000,minerals:1000}, effect:"All fuel x2, colony ship -30%",  tier:2 },
+];
+
+const KNOWLEDGE = [
+  { id:"k0",   name:"Colonial Doctrine",    desc:"Someone read the manual.",               cost:{research:40},                          effect:"+15% all production",           branch:"center",    ring:0, angle:0,   requires:[], exclusive:[] },
+  { id:"ke1",  name:"Solar Efficiency",     desc:"Panels face sun. 3 months to notice.",   cost:{research:80,energy:50},                effect:"Solar Arrays +40%",             branch:"energy",    ring:1, angle:0,   requires:["k0"],           exclusive:[] },
+  { id:"ke2",  name:"Plasma Conduits",      desc:"Tube go zap. Very efficient.",            cost:{research:160,energy:120},              effect:"Energy click x2.5",             branch:"energy",    ring:2, angle:0,   requires:["ke1"],          exclusive:[] },
+  { id:"ke3",  name:"Dyson Fragment",       desc:"A piece of a sphere. Start small.",       cost:{research:500,energy:400},              effect:"Energy production x4",          branch:"energy",    ring:3, angle:0,   requires:["ke2"],          exclusive:["km3","kr3","kp3"] },
+  { id:"km1",  name:"Core Sampling",        desc:"Drill first. Ask questions never.",       cost:{research:80,minerals:50},              effect:"Drill Rigs +40%",               branch:"minerals",  ring:1, angle:72,  requires:["k0"],           exclusive:[] },
+  { id:"km2",  name:"Nano-Excavators",      desc:"Tiny robots. Big mining. Adorable.",      cost:{research:160,minerals:120},            effect:"Minerals click x2.5",           branch:"minerals",  ring:2, angle:72,  requires:["km1"],          exclusive:[] },
+  { id:"km3",  name:"Asteroid Siphon",      desc:"Why mine planets when space is free?",    cost:{research:500,minerals:400},            effect:"Minerals production x4",        branch:"minerals",  ring:3, angle:72,  requires:["km2"],          exclusive:["ke3","kr3","kp3"] },
+  { id:"kr1",  name:"Peer Review",          desc:"Scientists read each others work.",        cost:{research:100},                         effect:"Labs +40% output",              branch:"research",  ring:1, angle:144, requires:["k0"],           exclusive:[] },
+  { id:"kr2",  name:"Quantum Computing",    desc:"Yes and no. Until billing.",               cost:{research:220},                         effect:"Research click x2.5",           branch:"research",  ring:2, angle:144, requires:["kr1"],          exclusive:[] },
+  { id:"kr3",  name:"Unified Field Theory", desc:"Everything connected. So are costs.",     cost:{research:800},                         effect:"All production x2.5",           branch:"research",  ring:3, angle:144, requires:["kr2"],          exclusive:["ke3","km3","kp3"] },
+  { id:"kp1",  name:"Ergonomic Chairs",     desc:"Morale up. Back pain down.",               cost:{research:80,population:50},            effect:"Habitats +40%",                 branch:"population",ring:1, angle:216, requires:["k0"],           exclusive:[] },
+  { id:"kp2",  name:"Cloning Vats",         desc:"More Dave. Always more Dave.",             cost:{research:160,population:120},          effect:"Population click x2.5",         branch:"population",ring:2, angle:216, requires:["kp1"],          exclusive:[] },
+  { id:"kp3",  name:"Hive Mind Protocol",   desc:"We are one. Mostly Dave.",                 cost:{research:500,population:400},          effect:"Population x4, all bldgs +20%", branch:"population",ring:3, angle:216, requires:["kp2"],          exclusive:["ke3","km3","kr3"] },
+  { id:"kf1",  name:"Combustion Theory",    desc:"Fire goes up. Rocket goes up. Science.",   cost:{research:200,fuel:50},                 effect:"Launch Pads +50%",              branch:"fuel",      ring:1, angle:288, requires:["k0"],           exclusive:[] },
+  { id:"kf2",  name:"Antimatter Trace",     desc:"Found some. Contained it. Mostly.",        cost:{research:400,fuel:200,energy:200},     effect:"Fuel prod x2, orbital x1.5",    branch:"fuel",      ring:2, angle:288, requires:["kf1"],          exclusive:[] },
+  { id:"kf3",  name:"Warp Bubble Theory",   desc:"Fold space. Skip the commute.",            cost:{research:800,fuel:600,energy:400},     effect:"All fuel bldgs x3",             branch:"fuel",      ring:3, angle:288, requires:["kf2"],          exclusive:["ke3","km3","kr3","kp3"] },
+  { id:"cx_em", name:"Plasma Drill",        desc:"Drill plus plasma. Great holes.",           cost:{research:300,energy:200,minerals:200}, effect:"Refinery x3, E+M click x2",     branch:"cross_em",  ring:2, angle:36,  requires:["ke1","km1"],    exclusive:[], crossBridge:true },
+  { id:"cx_mr", name:"Xenoarchaeology",     desc:"Dug up something ancient.",                cost:{research:350,minerals:200},            effect:"M+R buildings x2",              branch:"cross_mr",  ring:2, angle:108, requires:["km1","kr1"],    exclusive:[], crossBridge:true },
+  { id:"cx_rp", name:"Neural Colony",       desc:"Dave uploaded. Dave is everywhere.",        cost:{research:350,population:200},          effect:"Med Bay x3, R+P click x2",      branch:"cross_rp",  ring:2, angle:180, requires:["kr1","kp1"],    exclusive:[], crossBridge:true },
+  { id:"cx_pf", name:"Bio-Reactors",        desc:"Waste to energy. Ew but efficient.",       cost:{research:300,population:150,fuel:100}, effect:"Pop generates fuel and energy",  branch:"cross_pf",  ring:2, angle:252, requires:["kp1","kf1"],    exclusive:[], crossBridge:true },
+  { id:"cx_fe", name:"Solar Sails",         desc:"Harness stellar wind for free thrust.",     cost:{research:300,fuel:150,energy:150},     effect:"Solar collectors x2, fuel x1.5",branch:"cross_fe",  ring:2, angle:324, requires:["kf1","ke1"],    exclusive:[], crossBridge:true },
+  { id:"cx_em2",name:"Stellar Forge",       desc:"A star in a box. HR approved.",             cost:{research:700,energy:500,minerals:500}, effect:"E+M production x3",             branch:"cross_em",  ring:3, angle:36,  requires:["cx_em","ke2","km2"], exclusive:[] },
+  { id:"cx_mr2",name:"Living Bedrock",      desc:"The rocks have opinions.",                  cost:{research:700,minerals:400,population:200},effect:"M+R x3, pop per drill",      branch:"cross_mr",  ring:3, angle:108, requires:["cx_mr","km2","kr2"], exclusive:[] },
+  { id:"cx_rp2",name:"Singularity Engine",  desc:"The machine thinks. Hope it likes us.",     cost:{research:1200,population:600,energy:400},effect:"ALL surface production x3",   branch:"cross_rp",  ring:3, angle:180, requires:["cx_rp","kr2","kp2"], exclusive:[] },
+  { id:"cx_pf2",name:"Warp Core",           desc:"Space bends. Profits do not. Yet.",         cost:{research:700,fuel:500,population:300}, effect:"All click x4, fuel+pop x3",     branch:"cross_pf",  ring:3, angle:252, requires:["cx_pf","kp2","kf2"], exclusive:[] },
+  { id:"cx_fe2",name:"Dyson Swarm",         desc:"Not one sphere. A thousand mirrors.",       cost:{research:900,fuel:600,energy:600},     effect:"Energy+fuel production x4",     branch:"cross_fe",  ring:3, angle:324, requires:["cx_fe","kf2","ke2"], exclusive:[] },
+];
+
+const BRANCH_COLOR = {
+  energy:"#e6a817", minerals:"#7c9e6f", research:"#6f9ec9", population:"#b07ec9", fuel:"#e06060",
+  cross_em:"#c8a040", cross_mr:"#6faa8a", cross_rp:"#9080c0", cross_pf:"#c07080", cross_fe:"#c0a060", center:"#ffffff",
+};
+
+const STORY_EVENTS = [
+  { id:"s1",  trigger:(b,k,l) => l>=1 && Object.values(b).reduce((a,v)=>a+v,0)>=5, title:"First Foothold",        icon:"🏕", text:"The colony has its first five operational structures. Director Vasquez calls it a miracle. The engineers call it Tuesday." },
+  { id:"s2",  trigger:(b,k,l) => (b.drill||0)>=5,                                   title:"Strange Ore",           icon:"💎", text:"Drill Rig 5 hit a vein of something that glows faintly purple. The geologists are excited. Mining continues." },
+  { id:"s3",  trigger:(b,k,l) => k.includes("k0"),                                  title:"The Manual",            icon:"📖", text:"A colonist read the Colonial Operations Manual. Productivity rose 15%. Everyone else is deeply suspicious of her." },
+  { id:"s4",  trigger:(b,k,l) => (b.lab||0)>=3,                                     title:"Anomalous Readings",    icon:"🔭", text:"Lab 3 detected trace biosignatures 40km underground. The lead researcher is now digging herself." },
+  { id:"s5",  trigger:(b,k,l) => k.includes("cx_rp"),                               title:"The Upload",            icon:"🧠", text:"Dave was uploaded to the colony network for efficiency. Dave is now the wifi password. Dave is everywhere. Dave is fine." },
+  { id:"s6",  trigger:(b,k,l) => (b.habitat||0)>=10,                                title:"Growing Colony",        icon:"🏘", text:"The 500th colonist arrived. Her name is Margaret. She immediately formed a complaints committee." },
+  { id:"s7",  trigger:(b,k,l) => (b.terraformer||0)>=1,                             title:"The Planet Responds",   icon:"🌍", text:"One hour after the Terraformer activated, the magnetic field shifted 3 degrees. Dave calls it breathing." },
+  { id:"s8",  trigger:(b,k,l) => l>=2,                                              title:"First Orbit",           icon:"🛸", text:"The first orbital platform achieved stable orbit at 08:42. Dave reported a wifi signal from 400km up. Nobody asked how." },
+  { id:"s9",  trigger:(b,k,l) => l>=2 && (b.orbitallab||0)>=1,                      title:"Zero-G Discovery",      icon:"🧪", text:"In zero gravity, the purple ore becomes transparent and emits a faint tone. Dr. Chen is calling it music." },
+  { id:"s10", trigger:(b,k,l) => l>=2 && (b.stationdock||0)>=1,                     title:"Station Online",        icon:"🔩", text:"The station dock came online. Three ships docked in the first hour. One was unscheduled and carried a birthday cake for Gerald." },
+  { id:"s11", trigger:(b,k,l) => k.includes("kf2"),                                 title:"Antimatter Incident",   icon:"⚠️",text:"The antimatter containment unit briefly destabilized. The lab is now slightly transparent. The physics team calls this fascinating." },
+  { id:"s12", trigger:(b,k,l) => l>=3,                                              title:"Into the Deep",         icon:"🌌", text:"Deep space probes deployed. One system is broadcasting a weather report for a planet we have not named yet." },
+  { id:"s13", trigger:(b,k,l) => l>=3 && (b.warplab||0)>=1,                         title:"Warp Signature",        icon:"〰️",text:"First microscale spacetime fold. Duration: 0.003 seconds. The chamber emerged 4 centimeters from its start. Dave felt it." },
+  { id:"s14", trigger:(b,k,l) => l>=3 && (b.shipyard||0)>=3,                        title:"The Shape of Tomorrow", icon:"🚀", text:"Commander Yuen said quietly: I think we are actually going to do this. Nobody disagreed. Not even Margaret." },
+  { id:"s15", trigger:(b,k,l) => (b.colonyship||0)>=1,                              title:"Launch Day",            icon:"🌠", text:"The colony ship sits at dock. Crew of 1,200 in cryo-sleep. Dave is the navigation AI. Dave is extremely excited." },
+];
+
+const AMBIENT_EVENTS = [
+  { icon:"📻", text:"Comms chatter: Has anyone seen Dave? Dave is everywhere. That is not an answer." },
+  { icon:"⚠️", text:"Maintenance notice: Drill Rig 7 is making a new noise. Engineering classifies it as probably fine." },
+  { icon:"🍵", text:"The cafeteria introduced a new protein blend. Colonist reviews range from acceptable to what is this." },
+  { icon:"🌡", text:"Surface temperature anomaly in sector 4. Geologists are excited. Everyone else is nervous." },
+  { icon:"🛰", text:"A passing survey drone caught something on its lower cameras. No comment yet." },
+  { icon:"💤", text:"Night shift report: all systems nominal. Dave hummed something in the ventilation at 3am." },
+  { icon:"📦", text:"Supply drone arrived 6 hours late. Contents: 400 units soy protein and a birthday card for Gerald." },
+  { icon:"🔧", text:"Engineering completed routine maintenance. Three walls are now a different color. Intentional, they say." },
+  { icon:"🌌", text:"A new star appeared in grid 7-C. It was not there yesterday. Astronomy is looking into it." },
+  { icon:"🛸", text:"Orbital crew reports lights below the cloud layer on the far continent. Unexplained. Logged." },
+  { icon:"📊", text:"Quarterly productivity report: everything up. Dave influence expanding beyond anticipated parameters." },
+  { icon:"⛽", text:"Fuel reserves at 94%. The smell from the launch pad is, according to engineering, totally normal." },
+];
+
+const DREAM_EVENTS = [
+  { id:"d1", name:"The Quiet Drift",        desc:"Colony ran smoothly. Nothing remarkable.",      bonus:{val:1.0},               flavor:"Nothing happened. Gloriously nothing." },
+  { id:"d2", name:"Solar Flare",            desc:"Arrays went into overdrive during a flare.",    bonus:{val:1.4,res:"energy"},  flavor:"Energy caches are overflowing." },
+  { id:"d3", name:"Mineral Rush",           desc:"Drills struck a rich vein overnight.",           bonus:{val:1.3,res:"minerals"},flavor:"Your miners look very pleased." },
+  { id:"d4", name:"Research Breakthrough",  desc:"A junior scientist had a eureka moment at 3am.", bonus:{val:1.5,res:"research"},flavor:"The whiteboards are covered in equations." },
+  { id:"d5", name:"Micrometeorite Storm",   desc:"Micro-impacts knocked some systems offline.",    bonus:{val:0.7},               flavor:"Minor hull damage. Major paperwork." },
+  { id:"d6", name:"Colonial Feast",         desc:"Someone found the emergency ration chocolate.",  bonus:{val:1.2,res:"population"},flavor:"The colony is suspiciously cheerful." },
+  { id:"d7", name:"Fuel Cache Found",       desc:"Probes located a dense fuel deposit nearby.",    bonus:{val:1.6,res:"fuel"},    flavor:"The fuel gauges look very happy." },
+  { id:"d8", name:"The Long Night",         desc:"A dust storm blanketed the solar arrays.",       bonus:{val:0.8},               flavor:"The dust has a lovely purple hue, at least." },
+];
+
+const MILESTONES_DEF = [
+  { id:"m1", name:"First Settlement",  check:(b,l,k) => Object.values(b).reduce((x,v)=>x+v,0)>=10, badge:"🏕", color:"#4a7a4a" },
+  { id:"m2", name:"Industrial Age",    check:(b,l,k) => (b.refinery||0)>=1,                         badge:"⚙️", color:"#8a6a2a" },
+  { id:"m3", name:"Terraformer",       check:(b,l,k) => (b.terraformer||0)>=1,                      badge:"🌍", color:"#2a6a5a" },
+  { id:"m4", name:"Orbital Achieved",  check:(b,l,k) => l>=2,                                       badge:"🛸", color:"#2a4a8a" },
+  { id:"m5", name:"Station Commander", check:(b,l,k) => (b.commandmodule||0)>=1,                    badge:"🔩", color:"#4a4a8a" },
+  { id:"m6", name:"Deep Space Pioneer",check:(b,l,k) => l>=3,                                       badge:"🌌", color:"#1a2a6a" },
+  { id:"m7", name:"Singularity",       check:(b,l,k) => k.includes("cx_rp2"),                       badge:"🤖", color:"#6a2a2a" },
+  { id:"m8", name:"Colony Ship Ready", check:(b,l,k) => (b.colonyship||0)>=1,                       badge:"🚀", color:"#6a1a1a" },
+];
+
+const ACHIEVEMENTS = [
+  { id:"a1",  name:"First Light",          desc:"Generate 100 Energy",              check:(r)=>r.energy>=100 },
+  { id:"a2",  name:"Rock Bottom",          desc:"Generate 100 Minerals",            check:(r)=>r.minerals>=100 },
+  { id:"a3",  name:"Eureka!",              desc:"Generate 100 Research",            check:(r)=>r.research>=100 },
+  { id:"a4",  name:"Crowded House",        desc:"Generate 100 Population",          check:(r)=>r.population>=100 },
+  { id:"a5",  name:"Fueled Up",            desc:"Generate 100 Fuel",                check:(r)=>r.fuel>=100 },
+  { id:"a6",  name:"Builder",              desc:"Own 10 buildings total",           check:(r,b)=>Object.values(b).reduce((a,v)=>a+v,0)>=10 },
+  { id:"a7",  name:"Researcher",           desc:"Buy 3 upgrades",                   check:(r,b,u)=>u.length>=3 },
+  { id:"a8",  name:"We Have Liftoff",      desc:"Reach Layer 2 Orbital",            check:(r,b,u,p,cl,k,sl,t,l)=>l>=2 },
+  { id:"a9",  name:"Into the Void",        desc:"Reach Layer 3 Deep Space",         check:(r,b,u,p,cl,k,sl,t,l)=>l>=3 },
+  { id:"a10", name:"Prestige Pioneer",     desc:"Launch colony ship once",          check:(r,b,u,p)=>p>=1 },
+  { id:"a11", name:"Serial Colonist",      desc:"Launch colony ship 3 times",       check:(r,b,u,p)=>p>=3 },
+  { id:"a12", name:"Mineral Hoarder",      desc:"Accumulate 10,000 Minerals",       check:(r)=>r.minerals>=10000 },
+  { id:"a13", name:"One Small Click",      desc:"Click 100 times",                  check:(r,b,u,p,cl)=>cl>=100 },
+  { id:"a14", name:"Carpal Tunnel",        desc:"Click 1,000 times",                check:(r,b,u,p,cl)=>cl>=1000 },
+  { id:"a15", name:"Dave? Is That You?",   desc:"Unlock Neural Colony",             check:(r,b,u,p,cl,k)=>k.includes("cx_rp") },
+  { id:"a16", name:"Planet Reshaper",      desc:"Build a Terraformer",              check:(r,b)=>(b.terraformer||0)>=1 },
+  { id:"a17", name:"Are We There Yet?",    desc:"1 million of any resource",        check:(r)=>Object.values(r).some(v=>v>=1e6) },
+  { id:"a18", name:"No Refunds",           desc:"Sell a building",                  check:(r,b,u,p,cl,k,sl)=>sl>=1 },
+  { id:"a19", name:"Speed Runner",         desc:"Colony ship in under 60 minutes",  check:(r,b,u,p,cl,k,sl,t)=>p>=1&&t<=3600 },
+  { id:"a20", name:"Path Finder",          desc:"Unlock a cross-branch node",       check:(r,b,u,p,cl,k)=>["cx_em","cx_mr","cx_rp","cx_pf","cx_fe"].some(x=>k.includes(x)) },
+  { id:"a21", name:"Singularity Now",      desc:"Unlock the Singularity Engine",    check:(r,b,u,p,cl,k)=>k.includes("cx_rp2") },
+  { id:"a22", name:"Warp Speed",           desc:"Unlock Warp Bubble Theory",        check:(r,b,u,p,cl,k)=>k.includes("kf3") },
+  { id:"a23", name:"We Are All Dave",      desc:"Unlock Hive Mind Protocol",        check:(r,b,u,p,cl,k)=>k.includes("kp3") },
+];
+
+const MILESTONE_ACH = { a8:"m4", a9:"m6", a10:"m8", a16:"m3" };
+const PLANETS = ["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc","HD 40307g","55 Cancri f","Wolf 1061c","Ross 128b","Teegarden b","LHS 1140b"];
+const LAYER_THEME = {
+  1:{ name:"Surface Colony",    color:"#7c9e6f", bg:"linear-gradient(180deg,#0a1a08 0%,#080d0a 100%)", border:"#2a4a2a", icon:"🌍" },
+  2:{ name:"Orbital Station",   color:"#6f9ec9", bg:"linear-gradient(180deg,#080f1a 0%,#050a12 100%)", border:"#1a3a5a", icon:"🛸" },
+  3:{ name:"Deep Space Program",color:"#e06060", bg:"linear-gradient(180deg,#150808 0%,#080508 100%)", border:"#3a1a1a", icon:"🌌" },
+};
+const COL_BG     = { energy:"#1a1400", minerals:"#0d1a0d", research:"#0d1220", population:"#150d1a", fuel:"#1a0d0d" };
+const COL_BORDER = { energy:"#3a2800", minerals:"#1a3a1a", research:"#1a2a40", population:"#2a1a3a", fuel:"#3a1a1a" };
+
+// ── sub-components ─────────────────────────────────────────────────────────
 
 function SupportTab() {
   return (
@@ -218,21 +236,21 @@ function SupportTab() {
       <div style={{fontSize:11,color:"#5a7a9a",marginBottom:20,lineHeight:1.6}}>
         Found a bug? Have a feature idea? Send us a message and we will get back to you.
       </div>
-      <a href="mailto:myemailisdanmail@gmail.com?subject=TICKET%20Space%20Base%20Race"
+      <a href="mailto:spacebaserace@gmail.com?subject=TICKET%20Space%20Base%20Race"
         style={{display:"inline-block",padding:"10px 24px",background:"#0d2a4a",border:"1px solid #4a9eff",borderRadius:8,color:"#4a9eff",fontSize:13,fontWeight:700,textDecoration:"none"}}>
-        myemailisdanmail@gmail.com
+        spacebaserace@gmail.com
       </a>
       <div style={{fontSize:10,color:"#3a5a7a",marginTop:12}}>
-        Please start your subject with: TICKET Space Base Race
+        Please use subject: TICKET Space Base Race
       </div>
     </div>
   );
 }
 
-function KnowledgeTree({knowledge, res, prod, buyKnowledge, layer}) {
-  const [hov, setHov] = useState(null);
+function KnowledgeTree({ knowledge, res, prod, buyKnowledge, layer }) {
+  const [hov, setHov]   = useState(null);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({x:0, y:0});
+  const [pan, setPan]   = useState({x:0, y:0});
   const [drag, setDrag] = useState(false);
   const dragRef = useRef(null);
   const CX = 290, CY = 290, W = 580, H = 580;
@@ -242,7 +260,7 @@ function KnowledgeTree({knowledge, res, prod, buyKnowledge, layer}) {
     const p = {};
     KNOWLEDGE.forEach(k => {
       if (k.ring === 0) {
-        p[k.id] = {x: CX, y: CY};
+        p[k.id] = { x: CX, y: CY };
       } else {
         const r = (k.ring === 2 && k.crossBridge) ? RR[2] - 10 : RR[k.ring];
         p[k.id] = polar(CX, CY, r, k.angle);
@@ -257,19 +275,21 @@ function KnowledgeTree({knowledge, res, prod, buyKnowledge, layer}) {
     return e;
   }, []);
 
-  const checkBlocked = (id) => {
-    const k = KNOWLEDGE.find(x => x.id === id);
-    if (!k || !k.exclusive || !k.exclusive.length) return false;
-    return k.exclusive.some(ex => knowledge.includes(ex));
-  };
-  const checkLayerLocked = (id) => ["kf1","kf2","kf3"].includes(id) && layer < 2;
+  const checkBlocked     = id => { const k = KNOWLEDGE.find(x => x.id===id); if (!k||!k.exclusive||!k.exclusive.length) return false; return k.exclusive.some(ex => knowledge.includes(ex)); };
+  const checkLayerLocked = id => ["kf1","kf2","kf3"].includes(id) && layer < 2;
 
-  const onWheel = (e) => { e.preventDefault(); setZoom(z => Math.min(4, Math.max(0.4, z * (e.deltaY > 0 ? 0.85 : 1.18)))); };
-  const onMouseDown = (e) => { if (e.button !== 0) return; setDrag(true); dragRef.current = {x: e.clientX - pan.x, y: e.clientY - pan.y}; };
-  const onMouseMove = (e) => { if (!drag || !dragRef.current) return; setPan({x: e.clientX - dragRef.current.x, y: e.clientY - dragRef.current.y}); };
-  const onMouseUp = () => setDrag(false);
+  const onWheel     = e => { e.preventDefault(); setZoom(z => Math.min(4, Math.max(0.4, z * (e.deltaY > 0 ? 0.85 : 1.18)))); };
+  const onMouseDown = e => { if (e.button !== 0) return; setDrag(true); dragRef.current = {x: e.clientX - pan.x, y: e.clientY - pan.y}; };
+  const onMouseMove = e => { if (!drag || !dragRef.current) return; setPan({x: e.clientX - dragRef.current.x, y: e.clientY - dragRef.current.y}); };
+  const onMouseUp   = () => setDrag(false);
 
-  const branchLabels = [{a:0,l:"Energy",c:"#e6a817"},{a:72,l:"Minerals",c:"#7c9e6f"},{a:144,l:"Research",c:"#6f9ec9"},{a:216,l:"Population",c:"#b07ec9"},{a:288,l:"Fuel",c:"#e06060"}];
+  const branchLabels = [
+    {a:0,   l:"Energy",     c:"#e6a817"},
+    {a:72,  l:"Minerals",   c:"#7c9e6f"},
+    {a:144, l:"Research",   c:"#6f9ec9"},
+    {a:216, l:"Population", c:"#b07ec9"},
+    {a:288, l:"Fuel",       c:"#e06060"},
+  ];
 
   return (
     <div>
@@ -290,44 +310,52 @@ function KnowledgeTree({knowledge, res, prod, buyKnowledge, layer}) {
           </defs>
           <rect width={W} height={H} fill="#080d1a"/>
           {RR.slice(1).map((r,i) => <circle key={i} cx={CX} cy={CY} r={r} fill="none" stroke="#1a2a3a" strokeWidth="0.5" strokeDasharray="2 8"/>)}
-          {[0,72,144,216,288].map(a => { const pt=polar(CX,CY,RR[4]+15,a); return <line key={a} x1={CX} y1={CY} x2={pt.x} y2={pt.y} stroke="#1a2535" strokeWidth="0.5"/>; })}
-          {branchLabels.map(({a,l,c}) => { const pt=polar(CX,CY,RR[4]+24,a); return <text key={a} x={pt.x} y={pt.y} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill={c} fontWeight="700" opacity={l==="Fuel"&&layer<2?0.3:0.7}>{l}</text>; })}
+          {[0,72,144,216,288].map(a => { const pt = polar(CX,CY,RR[4]+15,a); return <line key={a} x1={CX} y1={CY} x2={pt.x} y2={pt.y} stroke="#1a2535" strokeWidth="0.5"/>; })}
+          {branchLabels.map(({a,l,c}) => { const pt = polar(CX,CY,RR[4]+24,a); return <text key={a} x={pt.x} y={pt.y} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill={c} fontWeight="700" opacity={l==="Fuel"&&layer<2?0.3:0.7}>{l}</text>; })}
           {edgeList.map(([a,b,branch],i) => {
-            const p1=nodePos[a], p2=nodePos[b]; if(!p1||!p2) return null;
-            const both=knowledge.includes(a)&&knowledge.includes(b), bc=BRANCH_COLOR[branch]||"#4a9eff";
+            const p1 = nodePos[a], p2 = nodePos[b]; if (!p1||!p2) return null;
+            const both = knowledge.includes(a) && knowledge.includes(b);
+            const bc   = BRANCH_COLOR[branch] || "#4a9eff";
             return <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={both?bc:"#1e2e3e"} strokeWidth={both?2:1} strokeOpacity={both?0.7:0.35} strokeDasharray={both?"none":"3 5"}/>;
           })}
           {KNOWLEDGE.map(k => {
-            const p = nodePos[k.id]; if(!p) return null;
-            const owned=knowledge.includes(k.id), prereq=k.requires.every(r=>knowledge.includes(r));
-            const blocked=checkBlocked(k.id)&&!owned, ll=checkLayerLocked(k.id);
-            const afford=canAffordWith(res,k.cost), isH=hov===k.id;
-            const bc=BRANCH_COLOR[k.branch]||"#4a9eff";
-            const isCross=k.crossBridge||k.branch.startsWith("cross_"), nr=k.ring===0?22:isCross?16:k.ring===3?18:15;
-            const opacity=(blocked||ll)?0.12:owned?1:prereq?0.95:0.25;
-            const canBuy=prereq&&!owned&&!blocked&&!ll&&afford;
-            const ttW=(!owned&&prereq&&!blocked&&!ll)?timeToAfford(res,prod,k.cost):null;
-            const tw=184, th=ttW!==null?108:(prereq&&!owned)?90:72;
-            const tx=Math.min(Math.max(p.x-tw/2,2),W-tw-2);
-            const rawTy=p.y+nr+10, tty=rawTy+th>H-4?p.y-nr-th-8:rawTy;
-            const nodeStroke=owned?bc:(prereq&&!blocked&&!ll)?bc:"#1e2e3e";
-            const nodeFill=owned?"#0d2a1a":(prereq&&afford)?"#0d1525":"#080d1a";
-            const nFilter=(owned||isH)?"url(#glow1)":undefined;
-            const iconChar=ll?"🔒":blocked?"✗":owned?"✓":k.ring===0?"★":isCross?"◈":"·";
-            const iconFill=(blocked||ll)?"#3a3a3a":owned?bc:prereq?"#8ab4d4":"#2a4a6a";
-            const labelFill=(blocked||ll)?"#2a2a2a":owned?bc:prereq?"#6a8aaa":"#2a3a4a";
-            const shortName=k.name.length>18?k.name.slice(0,17)+"...":k.name;
+            const p = nodePos[k.id]; if (!p) return null;
+            const owned   = knowledge.includes(k.id);
+            const prereq  = k.requires.every(r => knowledge.includes(r));
+            const blocked = checkBlocked(k.id) && !owned;
+            const ll      = checkLayerLocked(k.id);
+            const afford  = canAffordWith(res, k.cost);
+            const isH     = hov === k.id;
+            const bc      = BRANCH_COLOR[k.branch] || "#4a9eff";
+            const isCross = k.crossBridge || k.branch.startsWith("cross_");
+            const nr      = k.ring===0 ? 22 : isCross ? 16 : k.ring===3 ? 18 : 15;
+            const opacity = (blocked||ll) ? 0.12 : owned ? 1 : prereq ? 0.95 : 0.25;
+            const canBuy  = prereq && !owned && !blocked && !ll && afford;
+            const ttW     = (!owned && prereq && !blocked && !ll) ? timeToAfford(res, prod, k.cost) : null;
+            const tw = 184;
+            const th = ttW !== null ? 108 : (prereq && !owned) ? 90 : 72;
+            const tx    = Math.min(Math.max(p.x - tw/2, 2), W - tw - 2);
+            const rawTy = p.y + nr + 10;
+            const tty   = rawTy + th > H - 4 ? p.y - nr - th - 8 : rawTy;
+            const nStroke = owned ? bc : (prereq && !blocked && !ll) ? bc : "#1e2e3e";
+            const nFill   = owned ? "#0d2a1a" : (prereq && afford) ? "#0d1525" : "#080d1a";
+            const nFilter = (owned || isH) ? "url(#glow1)" : undefined;
+            const iconChar  = ll ? "🔒" : blocked ? "X" : owned ? "V" : k.ring===0 ? "★" : isCross ? "◈" : "·";
+            const iconFill  = (blocked||ll) ? "#3a3a3a" : owned ? bc : prereq ? "#8ab4d4" : "#2a4a6a";
+            const labelFill = (blocked||ll) ? "#2a2a2a" : owned ? bc : prereq ? "#6a8aaa" : "#2a3a4a";
+            const shortName = k.name.length > 18 ? k.name.slice(0,17)+"..." : k.name;
             return (
               <g key={k.id} opacity={opacity} style={{cursor:canBuy?"pointer":"default"}}
-                onClick={() => { if(canBuy) buyKnowledge(k); }}
-                onMouseEnter={() => setHov(k.id)} onMouseLeave={() => setHov(null)}>
+                onClick={() => { if (canBuy) buyKnowledge(k); }}
+                onMouseEnter={() => setHov(k.id)}
+                onMouseLeave={() => setHov(null)}>
                 {(owned||isH) && <circle cx={p.x} cy={p.y} r={nr+9} fill={bc} fillOpacity="0.1" filter="url(#glow2)"/>}
                 {isCross ? (
                   <g transform={"rotate(45,"+p.x+","+p.y+")"}>
-                    <rect x={p.x-nr*0.75} y={p.y-nr*0.75} width={nr*1.5} height={nr*1.5} fill={nodeFill} stroke={nodeStroke} strokeWidth={owned?2.5:prereq?1.5:1} filter={nFilter} rx="2"/>
+                    <rect x={p.x-nr*0.75} y={p.y-nr*0.75} width={nr*1.5} height={nr*1.5} fill={nFill} stroke={nStroke} strokeWidth={owned?2.5:prereq?1.5:1} filter={nFilter} rx="2"/>
                   </g>
                 ) : (
-                  <circle cx={p.x} cy={p.y} r={nr} fill={nodeFill} stroke={nodeStroke} strokeWidth={owned?2.5:prereq?1.5:1} filter={nFilter}/>
+                  <circle cx={p.x} cy={p.y} r={nr} fill={nFill} stroke={nStroke} strokeWidth={owned?2.5:prereq?1.5:1} filter={nFilter}/>
                 )}
                 <text x={p.x} y={p.y+1} textAnchor="middle" dominantBaseline="middle" fontSize={k.ring===0?"13":"10"} fill={iconFill}>{iconChar}</text>
                 <text x={p.x} y={p.y+nr+9} textAnchor="middle" fontSize="7" fill={labelFill} fontWeight={owned?"700":"400"}>{shortName}</text>
@@ -372,43 +400,46 @@ function KnowledgeTree({knowledge, res, prod, buyKnowledge, layer}) {
   );
 }
 
+// ── main app ───────────────────────────────────────────────────────────────
 function App() {
-  const [res,setRes]                    = useState(initRes());
-  const [totalRes,setTotalRes]          = useState(initRes());
-  const [buildings,setBuildings]        = useState(initBuildings());
-  const [upgrades,setUpgrades]          = useState([]);
-  const [knowledge,setKnowledge]        = useState([]);
-  const [layer,setLayer]                = useState(1);
-  const [prestige,setPrestige]          = useState(0);
-  const [prestigeBonus,setPrestigeBonus]= useState(1);
-  const [legacyPoints,setLegacyPoints]  = useState(0);
-  const [currentPlanet,setCurrentPlanet]= useState("Earth II");
-  const [achievements,setAchievements]  = useState([]);
-  const [milestones,setMilestones]      = useState([]);
-  const [storyLog,setStoryLog]          = useState([]);
-  const [commsLog,setCommsLog]          = useState([]);
-  const [unseenComms,setUnseenComms]    = useState(0);
-  const [tab,setTab]                    = useState("build");
-  const [clickAnim,setClickAnim]        = useState(false);
-  const [newAch,setNewAch]              = useState(null);
-  const [elapsed,setElapsed]            = useState(0);
-  const [won,setWon]                    = useState(false);
-  const [totalClicks,setTotalClicks]    = useState(0);
-  const [totalSells,setTotalSells]      = useState(0);
-  const [offlineModal,setOfflineModal]  = useState(null);
-  const [paused,setPaused]              = useState(false);
-  const [ticker,setTicker]              = useState(null);
-  const [launchModal,setLaunchModal]    = useState(false);
-  const nextTickRef                     = useRef(0);
+  const [res,           setRes]           = useState(initRes());
+  const [totalRes,      setTotalRes]      = useState(initRes());
+  const [buildings,     setBuildings]     = useState(initBuildings());
+  const [upgrades,      setUpgrades]      = useState([]);
+  const [knowledge,     setKnowledge]     = useState([]);
+  const [layer,         setLayer]         = useState(1);
+  const [prestige,      setPrestige]      = useState(0);
+  const [prestigeBonus, setPrestigeBonus] = useState(1);
+  const [legacyPoints,  setLegacyPoints]  = useState(0);
+  const [currentPlanet, setCurrentPlanet] = useState("Earth II");
+  const [achievements,  setAchievements]  = useState([]);
+  const [milestones,    setMilestones]    = useState([]);
+  const [storyLog,      setStoryLog]      = useState([]);
+  const [commsLog,      setCommsLog]      = useState([]);
+  const [unseenComms,   setUnseenComms]   = useState(0);
+  const [tab,           setTab]           = useState("build");
+  const [clickAnim,     setClickAnim]     = useState(false);
+  const [newAch,        setNewAch]        = useState(null);
+  const [elapsed,       setElapsed]       = useState(0);
+  const [won,           setWon]           = useState(false);
+  const [totalClicks,   setTotalClicks]   = useState(0);
+  const [totalSells,    setTotalSells]    = useState(0);
+  const [offlineModal,  setOfflineModal]  = useState(null);
+  const [paused,        setPaused]        = useState(false);
+  const [ticker,        setTicker]        = useState(null);
+  const [launchModal,   setLaunchModal]   = useState(false);
+  const [logModal,      setLogModal]      = useState(false);
+  const nextTickRef = useRef(0);
 
+  // offline detection
   useEffect(() => {
     const saved = localStorage.getItem("sbr_save");
     if (saved) {
-      const diff = Math.floor((Date.now()-parseInt(saved))/1000);
+      const diff = Math.floor((Date.now() - parseInt(saved)) / 1000);
       if (diff > 30) {
         const capped = Math.min(diff, 28800);
-        const dream = DREAM_EVENTS[Math.floor(Math.random()*DREAM_EVENTS.length)];
-        setOfflineModal({secs:capped, dream, actual:diff});
+        const dream  = DREAM_EVENTS[Math.floor(Math.random() * DREAM_EVENTS.length)];
+        setOfflineModal({ secs:capped, dream, actual:diff });
       }
     }
     const sv = setInterval(() => localStorage.setItem("sbr_save", Date.now().toString()), 5000);
@@ -416,73 +447,91 @@ function App() {
     return () => clearInterval(sv);
   }, []);
 
-  useEffect(() => { if(won||paused) return; const t=setInterval(()=>setElapsed(e=>e+1),1000); return ()=>clearInterval(t); }, [won,paused]);
-  useEffect(() => { if(!won&&(buildings.colonyship||0)>=1) setWon(true); }, [buildings.colonyship, won]);
-  useEffect(() => { if(layer===1&&(buildings.terraformer||0)>=1) setLayer(2); if(layer===2&&(buildings.stationdock||0)>=1) setLayer(3); }, [buildings, layer]);
+  useEffect(() => { if (won||paused) return; const t=setInterval(()=>setElapsed(e=>e+1),1000); return ()=>clearInterval(t); }, [won, paused]);
+  useEffect(() => { if (!won && (buildings.colonyship||0)>=1) setWon(true); }, [buildings.colonyship, won]);
+  useEffect(() => { if (layer===1&&(buildings.terraformer||0)>=1) setLayer(2); if (layer===2&&(buildings.stationdock||0)>=1) setLayer(3); }, [buildings, layer]);
 
-  const fmtTime = s => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; if(h>0) return h+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0"); return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0"); };
+  const fmtTime = s => {
+    const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+    if (h>0) return h+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+    return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+  };
 
-  const getClickPower = useCallback((type) => {
+  const getClickPower = useCallback(type => {
     let b = 1;
-    if(upgrades.includes("u1")&&type==="energy") b*=2; if(upgrades.includes("u2")&&type==="minerals") b*=2;
-    if(upgrades.includes("u3")&&type==="research") b*=2; if(upgrades.includes("u4")&&type==="population") b*=2;
-    if(upgrades.includes("u5")&&(type==="energy"||type==="minerals")) b*=1.5;
-    if(upgrades.includes("u6")&&(type==="research"||type==="population")) b*=1.5;
-    if(upgrades.includes("u7")) b*=2;
-    if(knowledge.includes("ke2")&&type==="energy") b*=2.5; if(knowledge.includes("km2")&&type==="minerals") b*=2.5;
-    if(knowledge.includes("kr2")&&type==="research") b*=2.5; if(knowledge.includes("kp2")&&type==="population") b*=2.5;
-    if(knowledge.includes("kf2")&&type==="fuel") b*=2.5;
-    if(knowledge.includes("cx_em")&&(type==="energy"||type==="minerals")) b*=2;
-    if(knowledge.includes("cx_rp")&&(type==="research"||type==="population")) b*=2;
-    if(knowledge.includes("cx_pf2")) b*=4;
-    return Math.floor(b*prestigeBonus);
+    if (upgrades.includes("u1")&&type==="energy")     b *= 2;
+    if (upgrades.includes("u2")&&type==="minerals")   b *= 2;
+    if (upgrades.includes("u3")&&type==="research")   b *= 2;
+    if (upgrades.includes("u4")&&type==="population") b *= 2;
+    if (upgrades.includes("u5")&&(type==="energy"||type==="minerals"))     b *= 1.5;
+    if (upgrades.includes("u6")&&(type==="research"||type==="population")) b *= 1.5;
+    if (upgrades.includes("u7")) b *= 2;
+    if (knowledge.includes("ke2")&&type==="energy")     b *= 2.5;
+    if (knowledge.includes("km2")&&type==="minerals")   b *= 2.5;
+    if (knowledge.includes("kr2")&&type==="research")   b *= 2.5;
+    if (knowledge.includes("kp2")&&type==="population") b *= 2.5;
+    if (knowledge.includes("kf2")&&type==="fuel")       b *= 2.5;
+    if (knowledge.includes("cx_em")&&(type==="energy"||type==="minerals"))     b *= 2;
+    if (knowledge.includes("cx_rp")&&(type==="research"||type==="population")) b *= 2;
+    if (knowledge.includes("cx_pf2")) b *= 4;
+    return Math.floor(b * prestigeBonus);
   }, [upgrades, knowledge, prestigeBonus]);
 
   const getProd = useCallback(() => {
     const p = initRes();
     Object.values(BUILDINGS).forEach(bld => {
-      const cnt = buildings[bld.id]||0; if(!cnt) return;
+      const cnt = buildings[bld.id] || 0; if (!cnt) return;
       let m = prestigeBonus;
-      if(upgrades.includes("u1")&&bld.id==="solar") m*=2; if(upgrades.includes("u2")&&bld.id==="drill") m*=2;
-      if(upgrades.includes("u3")&&bld.id==="lab") m*=2; if(upgrades.includes("u4")&&bld.id==="habitat") m*=2;
-      if(upgrades.includes("u5")&&["solar","drill","refinery"].includes(bld.id)) m*=1.5;
-      if(upgrades.includes("u6")&&["lab","habitat","medbay"].includes(bld.id)) m*=1.5;
-      if(upgrades.includes("u7")) m*=2;
-      if(upgrades.includes("u8")&&bld.prod.fuel) m*=2; if(upgrades.includes("u9")&&bld.id==="orbitallab") m*=2;
-      if(upgrades.includes("u10")&&bld.layer===2) m*=1.5; if(upgrades.includes("u11")&&bld.id==="oreprocessor") m*=3;
-      if(upgrades.includes("u12")&&bld.id==="cryobay") m*=2; if(upgrades.includes("u13")&&bld.id==="warplab") m*=3;
-      if(upgrades.includes("u14")&&bld.id==="probefactory") m*=3; if(upgrades.includes("u15")&&bld.prod.fuel) m*=2;
-      if(knowledge.includes("k0")) m*=1.15;
-      if(knowledge.includes("ke1")&&bld.id==="solar") m*=1.4; if(knowledge.includes("ke2")&&bld.prod.energy) m*=1.2;
-      if(knowledge.includes("ke3")&&bld.prod.energy) m*=4;
-      if(knowledge.includes("km1")&&bld.id==="drill") m*=1.4;
-      if(knowledge.includes("km2")&&["drill","refinery","terraformer"].includes(bld.id)) m*=1.2;
-      if(knowledge.includes("km3")&&bld.prod.minerals) m*=4;
-      if(knowledge.includes("kr1")&&bld.id==="lab") m*=1.4;
-      if(knowledge.includes("kr2")&&["lab","medbay","orbitallab"].includes(bld.id)) m*=1.5;
-      if(knowledge.includes("kr3")) m*=2.5;
-      if(knowledge.includes("kp1")&&bld.id==="habitat") m*=1.4;
-      if(knowledge.includes("kp2")&&["habitat","medbay","cryobay"].includes(bld.id)) m*=1.5;
-      if(knowledge.includes("kp3")&&bld.prod.population) m*=4; if(knowledge.includes("kp3")) m*=1.2;
-      if(knowledge.includes("kf1")&&bld.id==="launchpad") m*=1.5;
-      if(knowledge.includes("kf2")&&bld.prod.fuel) m*=2; if(knowledge.includes("kf3")&&bld.prod.fuel) m*=3;
-      if(knowledge.includes("cx_em")&&bld.id==="refinery") m*=3;
-      if(knowledge.includes("cx_mr")&&["drill","lab","medbay","orbitallab"].includes(bld.id)) m*=2;
-      if(knowledge.includes("cx_rp")&&bld.id==="medbay") m*=3;
-      if(knowledge.includes("cx_pf")&&bld.prod.fuel) m*=1.5; if(knowledge.includes("cx_fe")&&bld.id==="solarcollector") m*=2;
-      if(knowledge.includes("cx_em2")&&(bld.prod.energy||bld.prod.minerals)) m*=3;
-      if(knowledge.includes("cx_mr2")&&(bld.prod.minerals||bld.prod.research)) m*=3;
-      if(knowledge.includes("cx_rp2")) m*=3;
-      if(knowledge.includes("cx_pf2")&&(bld.prod.fuel||bld.prod.population)) m*=3;
-      if(knowledge.includes("cx_fe2")&&(bld.prod.fuel||bld.prod.energy)) m*=4;
-      Object.entries(bld.prod).forEach(([k,v]) => { p[k] += v*cnt*m; });
+      if (upgrades.includes("u1")&&bld.id==="solar")   m*=2;
+      if (upgrades.includes("u2")&&bld.id==="drill")   m*=2;
+      if (upgrades.includes("u3")&&bld.id==="lab")     m*=2;
+      if (upgrades.includes("u4")&&bld.id==="habitat") m*=2;
+      if (upgrades.includes("u5")&&["solar","drill","refinery"].includes(bld.id)) m*=1.5;
+      if (upgrades.includes("u6")&&["lab","habitat","medbay"].includes(bld.id))   m*=1.5;
+      if (upgrades.includes("u7"))  m*=2;
+      if (upgrades.includes("u8")&&bld.prod.fuel)            m*=2;
+      if (upgrades.includes("u9")&&bld.id==="orbitallab")    m*=2;
+      if (upgrades.includes("u10")&&bld.layer===2)           m*=1.5;
+      if (upgrades.includes("u11")&&bld.id==="oreprocessor") m*=3;
+      if (upgrades.includes("u12")&&bld.id==="cryobay")      m*=2;
+      if (upgrades.includes("u13")&&bld.id==="warplab")      m*=3;
+      if (upgrades.includes("u14")&&bld.id==="probefactory") m*=3;
+      if (upgrades.includes("u15")&&bld.prod.fuel)           m*=2;
+      if (knowledge.includes("k0"))  m*=1.15;
+      if (knowledge.includes("ke1")&&bld.id==="solar")   m*=1.4;
+      if (knowledge.includes("ke2")&&bld.prod.energy)    m*=1.2;
+      if (knowledge.includes("ke3")&&bld.prod.energy)    m*=4;
+      if (knowledge.includes("km1")&&bld.id==="drill")   m*=1.4;
+      if (knowledge.includes("km2")&&["drill","refinery","terraformer"].includes(bld.id)) m*=1.2;
+      if (knowledge.includes("km3")&&bld.prod.minerals)  m*=4;
+      if (knowledge.includes("kr1")&&bld.id==="lab")     m*=1.4;
+      if (knowledge.includes("kr2")&&["lab","medbay","orbitallab"].includes(bld.id)) m*=1.5;
+      if (knowledge.includes("kr3"))  m*=2.5;
+      if (knowledge.includes("kp1")&&bld.id==="habitat") m*=1.4;
+      if (knowledge.includes("kp2")&&["habitat","medbay","cryobay"].includes(bld.id)) m*=1.5;
+      if (knowledge.includes("kp3")&&bld.prod.population) m*=4;
+      if (knowledge.includes("kp3"))  m*=1.2;
+      if (knowledge.includes("kf1")&&bld.id==="launchpad") m*=1.5;
+      if (knowledge.includes("kf2")&&bld.prod.fuel) m*=2;
+      if (knowledge.includes("kf3")&&bld.prod.fuel) m*=3;
+      if (knowledge.includes("cx_em")&&bld.id==="refinery") m*=3;
+      if (knowledge.includes("cx_mr")&&["drill","lab","medbay","orbitallab"].includes(bld.id)) m*=2;
+      if (knowledge.includes("cx_rp")&&bld.id==="medbay")        m*=3;
+      if (knowledge.includes("cx_pf")&&bld.prod.fuel)             m*=1.5;
+      if (knowledge.includes("cx_fe")&&bld.id==="solarcollector") m*=2;
+      if (knowledge.includes("cx_em2")&&(bld.prod.energy||bld.prod.minerals))  m*=3;
+      if (knowledge.includes("cx_mr2")&&(bld.prod.minerals||bld.prod.research))m*=3;
+      if (knowledge.includes("cx_rp2")) m*=3;
+      if (knowledge.includes("cx_pf2")&&(bld.prod.fuel||bld.prod.population)) m*=3;
+      if (knowledge.includes("cx_fe2")&&(bld.prod.fuel||bld.prod.energy))     m*=4;
+      Object.entries(bld.prod).forEach(([k,v]) => { p[k] += v * cnt * m; });
     });
-    if(knowledge.includes("cx_pf")) { const fp=p.population||0; p.fuel+=fp*0.2; p.energy+=fp*0.1; }
+    if (knowledge.includes("cx_pf")) { const fp=p.population||0; p.fuel+=fp*0.2; p.energy+=fp*0.1; }
     return p;
   }, [buildings, upgrades, knowledge, prestigeBonus]);
 
   useEffect(() => {
-    if(paused) return;
+    if (paused) return;
     const t = setInterval(() => {
       const p = getProd();
       setRes(r => { const n={...r}; Object.keys(p).forEach(k => { n[k]+=p[k]/10; }); return n; });
@@ -491,49 +540,51 @@ function App() {
     return () => clearInterval(t);
   }, [getProd, paused]);
 
+  // first ticker
   useEffect(() => {
     const t = setTimeout(() => {
       const ev = AMBIENT_EVENTS[0];
-      setTicker({icon:ev.icon, text:ev.text, isStory:false});
-      setCommsLog(prev => [{...ev, time:0, kind:"ambient"}, ...prev]);
+      setTicker({ icon:ev.icon, text:ev.text, isStory:false });
+      setCommsLog(prev => [{ ...ev, time:0, kind:"ambient" }, ...prev]);
       setUnseenComms(n => n+1);
-      nextTickRef.current = Date.now() + (3+Math.random()*3)*60*1000;
+      nextTickRef.current = Date.now() + (3 + Math.random()*3)*60*1000;
     }, 8000);
     return () => clearTimeout(t);
   }, []);
 
+  // recurring ticker
   useEffect(() => {
-    if(paused) return;
+    if (paused) return;
     const iv = setInterval(() => {
-      if(Date.now() < nextTickRef.current) return;
-      const pending = STORY_EVENTS.filter(ev => !storyLog.find(s=>s.id===ev.id) && ev.trigger(buildings,knowledge,layer));
+      if (Date.now() < nextTickRef.current) return;
+      const pending = STORY_EVENTS.filter(ev => !storyLog.find(s=>s.id===ev.id) && ev.trigger(buildings, knowledge, layer));
       let ev;
-      if(pending.length > 0) {
+      if (pending.length > 0) {
         ev = pending[0];
-        setStoryLog(prev => [{...ev, time:elapsed}, ...prev]);
-        setCommsLog(prev => [{...ev, time:elapsed, kind:"story"}, ...prev]);
+        setStoryLog(prev => [{ ...ev, time:elapsed }, ...prev]);
+        setCommsLog(prev => [{ ...ev, time:elapsed, kind:"story" }, ...prev]);
       } else {
-        ev = AMBIENT_EVENTS[Math.floor(Math.random()*AMBIENT_EVENTS.length)];
-        setCommsLog(prev => [{...ev, time:elapsed, kind:"ambient"}, ...prev]);
+        ev = AMBIENT_EVENTS[Math.floor(Math.random() * AMBIENT_EVENTS.length)];
+        setCommsLog(prev => [{ ...ev, time:elapsed, kind:"ambient" }, ...prev]);
       }
-      setTicker({icon:ev.icon, text:ev.text||ev.title, isStory:!!ev.title, title:ev.title});
+      setTicker({ icon:ev.icon, text:ev.text||ev.title, isStory:!!ev.title, title:ev.title });
       setUnseenComms(n => n+1);
-      nextTickRef.current = Date.now() + (3+Math.random()*3)*60*1000;
+      nextTickRef.current = Date.now() + (3 + Math.random()*3)*60*1000;
     }, 5000);
     return () => clearInterval(iv);
   }, [paused, buildings, knowledge, layer, storyLog, elapsed]);
 
   useEffect(() => {
     STORY_EVENTS.forEach(ev => {
-      if(!storyLog.find(s=>s.id===ev.id) && ev.trigger(buildings,knowledge,layer)) {
-        setStoryLog(prev => [{...ev, time:elapsed}, ...prev]);
+      if (!storyLog.find(s=>s.id===ev.id) && ev.trigger(buildings, knowledge, layer)) {
+        setStoryLog(prev => [{ ...ev, time:elapsed }, ...prev]);
       }
     });
   }, [buildings, knowledge, layer, elapsed, storyLog]);
 
   useEffect(() => {
     MILESTONES_DEF.forEach(m => {
-      if(!milestones.includes(m.id) && m.check(buildings,layer,knowledge)) {
+      if (!milestones.includes(m.id) && m.check(buildings, layer, knowledge)) {
         setMilestones(prev => [...prev, m.id]);
       }
     });
@@ -541,7 +592,7 @@ function App() {
 
   useEffect(() => {
     ACHIEVEMENTS.forEach(a => {
-      if(!achievements.includes(a.id) && a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer)) {
+      if (!achievements.includes(a.id) && a.check(totalRes, buildings, upgrades, prestige, totalClicks, knowledge, totalSells, elapsed, layer)) {
         setAchievements(prev => [...prev, a.id]);
         setNewAch(a.name);
         setTimeout(() => setNewAch(null), 3000);
@@ -549,76 +600,80 @@ function App() {
     });
   }, [totalRes, buildings, upgrades, prestige, totalClicks, knowledge, totalSells, elapsed, layer, achievements]);
 
-  const prod = getProd();
-  const canAfford = costs => canAffordWith(res, costs);
+  const prod       = getProd();
+  const canAfford  = costs => canAffordWith(res, costs);
+
   const buildingCost = b => {
-    const cnt=buildings[b.id]||0, m=Math.pow(1.08,cnt), disc=upgrades.includes("u15")&&b.id==="colonyship"?0.7:1;
-    if(b.cost) { const c={}; Object.entries(b.cost).forEach(([k,v]) => { c[k]=Math.floor(v*m*disc); }); return c; }
-    return {[b.res]: Math.floor(b.base*m)};
+    const cnt = buildings[b.id]||0, m = Math.pow(1.08, cnt);
+    const disc = upgrades.includes("u15") && b.id==="colonyship" ? 0.7 : 1;
+    if (b.cost) { const c={}; Object.entries(b.cost).forEach(([k,v]) => { c[k]=Math.floor(v*m*disc); }); return c; }
+    return { [b.res]: Math.floor(b.base * m) };
   };
   const buyBuilding = b => {
-    const cost=buildingCost(b); if(!canAfford(cost)) return;
-    setRes(r => { const n={...r}; Object.entries(cost).forEach(([k,v]) => { n[k]-=v; }); return n; });
-    setBuildings(p => ({...p, [b.id]:(p[b.id]||0)+1}));
+    const cost = buildingCost(b); if (!canAfford(cost)) return;
+    setRes(r => { const n={...r}; Object.entries(cost).forEach(([k,v])=>{ n[k]-=v; }); return n; });
+    setBuildings(p => ({ ...p, [b.id]:(p[b.id]||0)+1 }));
   };
   const sellBuilding = b => {
-    const owned=buildings[b.id]||0; if(!owned) return;
-    const cost=buildingCost(b);
-    const refund=Object.fromEntries(Object.entries(cost).map(([k,v]) => [k, Math.floor(v*0.5)]));
-    setRes(r => { const n={...r}; Object.entries(refund).forEach(([k,v]) => { n[k]+=v; }); return n; });
-    setBuildings(p => ({...p, [b.id]:owned-1}));
+    const owned = buildings[b.id]||0; if (!owned) return;
+    const cost   = buildingCost(b);
+    const refund = Object.fromEntries(Object.entries(cost).map(([k,v]) => [k, Math.floor(v*0.5)]));
+    setRes(r => { const n={...r}; Object.entries(refund).forEach(([k,v])=>{ n[k]+=v; }); return n; });
+    setBuildings(p => ({ ...p, [b.id]:owned-1 }));
     setTotalSells(s => s+1);
   };
   const buyUpgrade = u => {
-    if(upgrades.includes(u.id)||!canAfford(u.cost)) return;
-    if(!Object.entries(u.req).every(([k,v]) => (totalRes[k]||0)>=v)) return;
-    setRes(r => { const n={...r}; Object.entries(u.cost).forEach(([k,v]) => { n[k]-=v; }); return n; });
+    if (upgrades.includes(u.id) || !canAfford(u.cost)) return;
+    if (!Object.entries(u.req).every(([k,v]) => (totalRes[k]||0)>=v)) return;
+    setRes(r => { const n={...r}; Object.entries(u.cost).forEach(([k,v])=>{ n[k]-=v; }); return n; });
     setUpgrades(p => [...p, u.id]);
   };
   const buyKnowledge = k => {
-    const blocked=k.exclusive&&k.exclusive.some(ex=>knowledge.includes(ex));
-    if(knowledge.includes(k.id)||!canAfford(k.cost)||blocked) return;
-    if(!k.requires.every(r=>knowledge.includes(r))) return;
-    setRes(r => { const n={...r}; Object.entries(k.cost).forEach(([key,v]) => { n[key]-=v; }); return n; });
+    const blocked = k.exclusive && k.exclusive.some(ex => knowledge.includes(ex));
+    if (knowledge.includes(k.id) || !canAfford(k.cost) || blocked) return;
+    if (!k.requires.every(r => knowledge.includes(r))) return;
+    setRes(r => { const n={...r}; Object.entries(k.cost).forEach(([key,v])=>{ n[key]-=v; }); return n; });
     setKnowledge(p => [...p, k.id]);
   };
   const doPrestige = () => {
-    const lp = Math.floor(elapsed/60)+knowledge.length*2+layer*10;
-    setPrestige(p => p+1); setPrestigeBonus(b => b*1.5); setLegacyPoints(prev => prev+lp);
-    setCurrentPlanet(PLANETS[prestige%PLANETS.length]);
+    const lp = Math.floor(elapsed/60) + knowledge.length*2 + layer*10;
+    setPrestige(p => p+1);
+    setPrestigeBonus(b => b*1.5);
+    setLegacyPoints(prev => prev+lp);
+    setCurrentPlanet(PLANETS[prestige % PLANETS.length]);
     setRes(initRes()); setTotalRes(initRes()); setBuildings(initBuildings()); setUpgrades([]);
-    setKnowledge(prev => prev.filter(id => KNOWLEDGE.find(k=>k.id===id&&(k.crossBridge||k.branch.startsWith("cross_")))));
+    setKnowledge(prev => prev.filter(id => KNOWLEDGE.find(k => k.id===id && (k.crossBridge||k.branch.startsWith("cross_")))));
     setLayer(1); setWon(false); setElapsed(0); setLaunchModal(false);
   };
   const handleClick = type => {
-    const power=getClickPower(type);
-    setRes(r => ({...r, [type]:r[type]+power})); setTotalRes(r => ({...r, [type]:r[type]+power}));
+    const power = getClickPower(type);
+    setRes(r => ({ ...r, [type]:r[type]+power }));
+    setTotalRes(r => ({ ...r, [type]:r[type]+power }));
     setClickAnim(type); setTotalClicks(c => c+1);
     setTimeout(() => setClickAnim(false), 120);
   };
   const applyOffline = (secs, dream) => {
-    const p=getProd(); const gained=initRes();
-    Object.keys(p).forEach(k => { let g=p[k]*secs; if(!dream.bonus.res||dream.bonus.res===k) g*=dream.bonus.val; gained[k]=g; });
-    setRes(r => { const n={...r}; Object.keys(gained).forEach(k => { n[k]+=gained[k]; }); return n; });
-    setTotalRes(r => { const n={...r}; Object.keys(gained).forEach(k => { n[k]+=gained[k]; }); return n; });
+    const p = getProd(); const gained = initRes();
+    Object.keys(p).forEach(k => { let g=p[k]*secs; if (!dream.bonus.res||dream.bonus.res===k) g*=dream.bonus.val; gained[k]=g; });
+    setRes(r => { const n={...r}; Object.keys(gained).forEach(k=>{ n[k]+=gained[k]; }); return n; });
+    setTotalRes(r => { const n={...r}; Object.keys(gained).forEach(k=>{ n[k]+=gained[k]; }); return n; });
     setOfflineModal(null);
   };
 
-  const lt = LAYER_THEME[layer];
-  const latestM = milestones.length>0 ? MILESTONES_DEF.find(m=>m.id===milestones[milestones.length-1]) : null;
-  const accent = latestM ? latestM.color : "#1e3a5f";
-  const chip = (ok, text) => <span style={{fontSize:9,padding:"1px 4px",borderRadius:3,background:ok?"#0d2a0d":"#2a0d0d",color:ok?"#6fcf97":"#eb5757"}}>{text}</span>;
-  const activeResKeys = layer>=2 ? ["energy","minerals","research","population","fuel"] : ["energy","minerals","research","population"];
-  const resCols = layer>=2 ? ["energy","minerals","research","population","fuel"] : ["energy","minerals","research","population"];
+  const lt       = LAYER_THEME[layer];
+  const latestM  = milestones.length>0 ? MILESTONES_DEF.find(m=>m.id===milestones[milestones.length-1]) : null;
+  const accent   = latestM ? latestM.color : "#1e3a5f";
+  const chip     = (ok, text) => <span style={{fontSize:9,padding:"1px 4px",borderRadius:3,background:ok?"#0d2a0d":"#2a0d0d",color:ok?"#6fcf97":"#eb5757"}}>{text}</span>;
+  const resCols  = layer>=2 ? ["energy","minerals","research","population","fuel"] : ["energy","minerals","research","population"];
   const clickBtns = [
-    {type:"energy",    icon:"⚡", label:"Energy",     unlocked:true},
-    {type:"minerals",  icon:"⛏",  label:"Mine",        unlocked:(buildings.solar||0)>=10},
-    {type:"research",  icon:"🔬", label:"Research",    unlocked:(buildings.drill||0)>=10},
-    {type:"population",icon:"👥", label:"Habitat",     unlocked:(buildings.lab||0)>=10},
-    {type:"fuel",      icon:"⛽", label:"Fuel",         unlocked:layer>=2},
+    { type:"energy",     icon:"⚡", label:"Energy",   unlocked:true },
+    { type:"minerals",   icon:"⛏",  label:"Mine",     unlocked:(buildings.solar||0)>=10 },
+    { type:"research",   icon:"🔬", label:"Research", unlocked:(buildings.drill||0)>=10 },
+    { type:"population", icon:"👥", label:"Habitat",  unlocked:(buildings.lab||0)>=10 },
+    { type:"fuel",       icon:"⛽", label:"Fuel",      unlocked:layer>=2 },
   ].filter(c => c.unlocked);
-  const visBuildings = Object.values(BUILDINGS).filter(b => b.layer<=layer);
-  const visUpgrades  = UPGRADES.filter(u => u.layer<=layer);
+  const visBuildings = Object.values(BUILDINGS).filter(b => b.layer <= layer);
+  const visUpgrades  = UPGRADES.filter(u => u.layer <= layer);
   const TABS = ["build","upgrade","knowledge","achievements","launch","support"];
 
   return (
@@ -658,9 +713,34 @@ function App() {
               <div style={{fontSize:13,fontWeight:700,color:"#e6a817",marginBottom:4}}>{offlineModal.dream.name}</div>
               <div style={{fontSize:11,color:"#8a9aaa",marginBottom:4,fontStyle:"italic"}}>{offlineModal.dream.flavor}</div>
               <div style={{fontSize:11,color:"#c8d8f0"}}>{offlineModal.dream.desc}</div>
-              <div style={{fontSize:11,color:"#6fcf97",marginTop:4}}>{"Bonus: "+(offlineModal.dream.bonus.val>=1?(((offlineModal.dream.bonus.val-1)*100).toFixed(0)+"% extra"+(offlineModal.dream.bonus.res?" "+RES[offlineModal.dream.bonus.res].icon:" all")):"minus"+((1-offlineModal.dream.bonus.val)*100).toFixed(0)+"% efficiency")}</div>
+              <div style={{fontSize:11,color:"#6fcf97",marginTop:4}}>{"Bonus: "+(offlineModal.dream.bonus.val>=1?(((offlineModal.dream.bonus.val-1)*100).toFixed(0)+"% extra"+(offlineModal.dream.bonus.res?" "+RES[offlineModal.dream.bonus.res].icon:" all")):"minus "+((1-offlineModal.dream.bonus.val)*100).toFixed(0)+"% efficiency")}</div>
             </div>
             <button onClick={() => applyOffline(offlineModal.secs, offlineModal.dream)} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:accent,color:"#fff",cursor:"pointer",fontSize:14,fontWeight:700}}>Collect Offline Earnings</button>
+          </div>
+        </div>
+      )}
+
+      {logModal && (
+        <div style={{position:"fixed",inset:0,background:"#000000cc",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:1000,paddingTop:40,overflowY:"auto"}} onClick={() => setLogModal(false)}>
+          <div style={{background:"#0a1525",border:"1px solid #1e3a5f",borderRadius:12,padding:"16px",maxWidth:500,width:"90%",maxHeight:"80vh",overflowY:"auto"}} onClick={e => e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <span style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>Colony Transmission Log</span>
+              <button onClick={() => setLogModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:16}}>X</button>
+            </div>
+            {commsLog.length===0 && <div style={{textAlign:"center",color:"#3a5a7a",fontSize:12,padding:"20px 0"}}>No transmissions yet. Keep building.</div>}
+            {commsLog.map((ev,i) => {
+              const isStory = ev.kind==="story";
+              return (
+                <div key={i} style={{background:"#080d1a",border:"1px solid "+(i===0?isStory?"#2a4a6a":"#1a2a3a":"#101820"),borderRadius:8,padding:"8px 10px",marginBottom:6,opacity:i===0?1:isStory?0.9:0.65}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:isStory?3:1}}>
+                    <span style={{fontSize:isStory?15:12,flexShrink:0}}>{ev.icon}</span>
+                    {isStory ? <span style={{fontSize:12,fontWeight:700,color:"#a0c4ff"}}>{ev.title}</span> : <span style={{fontSize:10,fontWeight:600,color:"#4a6a8a"}}>Comms</span>}
+                    <span style={{fontSize:9,color:"#2a4a6a",marginLeft:"auto"}}>{"T+"+fmtTime(ev.time||0)}</span>
+                  </div>
+                  <div style={{fontSize:isStory?10:9,color:isStory?"#8a9aaa":"#4a6a7a",lineHeight:1.5,fontStyle:isStory?"normal":"italic"}}>{ev.text}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -674,10 +754,10 @@ function App() {
             <span style={{fontSize:11,color:lt.color,fontWeight:600}}>{lt.name}</span>
           </div>
           <span style={{fontSize:11,color:"#5a7a9a"}}>{"📍 "+currentPlanet}</span>
-          <div style={{display:"flex",gap:2}}>{milestones.map(mid => { const m=MILESTONES_DEF.find(x=>x.id===mid); return m ? <span key={mid} title={m.name} style={{fontSize:13,cursor:"default"}}>{m.badge}</span> : null; })}</div>
+          <div style={{display:"flex",gap:2}}>{milestones.map(mid => { const m=MILESTONES_DEF.find(x=>x.id===mid); return m?<span key={mid} title={m.name} style={{fontSize:13,cursor:"default"}}>{m.badge}</span>:null; })}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={() => setPaused(p => !p)} style={{padding:"3px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:12,cursor:"pointer",fontWeight:600}}>Pause</button>
+          <button onClick={() => setPaused(p=>!p)} style={{padding:"3px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:12,cursor:"pointer",fontWeight:600}}>Pause</button>
           <span style={{fontSize:13,fontFamily:"monospace",fontWeight:700,color:won?"#6fcf97":"#a0c4ff",background:"#080d1a",padding:"3px 10px",borderRadius:6,border:"1px solid "+accent}}>{won?"🏁 ":"⏱ "}{fmtTime(elapsed)}</span>
           {prestige>0 && <span style={{fontSize:11,color:"#b07ec9"}}>{prestige+"x | "+prestigeBonus.toFixed(1)+"x"}</span>}
           {legacyPoints>0 && <span style={{fontSize:11,color:"#e6a817"}}>{"LP: "+legacyPoints}</span>}
@@ -689,13 +769,13 @@ function App() {
         {[1,2,3].map(l => {
           const lt2=LAYER_THEME[l], active=layer===l, done=layer>l;
           const label = l===1?"🌍 Surface":l===2?"🛸 Orbital":"🌌 Deep Space";
-          const hint  = l===2?"(Terraformer)":l===3?"(Station Dock)":"";
+          const hint  = l===2?"Terraformer":l===3?"Station Dock":"";
           return (
             <div key={l} style={{flex:1,background:done?"#0a1a0a":active?lt2.bg:"#080d1a",border:"1px solid "+(done?"#2a4a2a":active?lt2.color:"#1a2a3a"),borderRadius:6,padding:"4px 6px",textAlign:"center",transition:"all 0.3s"}}>
               <div style={{fontSize:10,fontWeight:active?700:400,color:done?"#6fcf97":active?lt2.color:"#3a5a7a"}}>{label}</div>
               {!done&&!active && <div style={{fontSize:8,color:"#2a4a6a"}}>{hint}</div>}
-              {done && <div style={{fontSize:8,color:"#4a8a4a"}}>Complete</div>}
-              {active && <div style={{fontSize:8,color:lt2.color,fontWeight:600}}>Active</div>}
+              {done          && <div style={{fontSize:8,color:"#4a8a4a"}}>Complete</div>}
+              {active        && <div style={{fontSize:8,color:lt2.color,fontWeight:600}}>Active</div>}
             </div>
           );
         })}
@@ -709,8 +789,8 @@ function App() {
       )}
 
       {/* Resources */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat("+activeResKeys.length+",1fr)",gap:5,marginBottom:8}}>
-        {activeResKeys.map(k => { const r=RES[k]; return (
+      <div style={{display:"grid",gridTemplateColumns:"repeat("+resCols.length+",1fr)",gap:5,marginBottom:8}}>
+        {resCols.map(k => { const r=RES[k]; return (
           <div key={k} style={{background:"#0d1a2e",border:"1px solid "+accent,borderRadius:8,padding:"5px 6px",textAlign:"center"}}>
             <div style={{fontSize:15}}>{r.icon}</div>
             <div style={{fontSize:13,fontWeight:700,color:r.color}}>{FMT(res[k]||0)}</div>
@@ -730,10 +810,10 @@ function App() {
         ))}
       </div>
       <div style={{fontSize:9,color:"#3a5a7a",textAlign:"center",marginBottom:8,minHeight:11}}>
-        {layer===1&&(buildings.solar||0)<10 && ("Mine unlocks at 10 Solar Arrays ("+(buildings.solar||0)+"/10)")}
-        {layer===1&&(buildings.solar||0)>=10&&(buildings.drill||0)<10 && ("Research unlocks at 10 Drill Rigs ("+(buildings.drill||0)+"/10)")}
-        {layer===1&&(buildings.drill||0)>=10&&(buildings.lab||0)<10 && ("Habitat unlocks at 10 Research Labs ("+(buildings.lab||0)+"/10)")}
-        {layer>=2 && "Fuel click active"}
+        {layer===1&&(buildings.solar||0)<10   && ("Mine unlocks at 10 Solar Arrays ("+(buildings.solar||0)+"/10)")}
+        {layer===1&&(buildings.solar||0)>=10&&(buildings.drill||0)<10  && ("Research unlocks at 10 Drill Rigs ("+(buildings.drill||0)+"/10)")}
+        {layer===1&&(buildings.drill||0)>=10&&(buildings.lab||0)<10    && ("Habitat unlocks at 10 Research Labs ("+(buildings.lab||0)+"/10)")}
+        {layer>=2  && "Fuel click active"}
       </div>
 
       {/* Ticker */}
@@ -741,11 +821,11 @@ function App() {
         <div style={{background:"#090f1e",border:"1px solid #1e3a5f",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",alignItems:"flex-start",gap:8,position:"relative"}}>
           <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{ticker.icon||"📻"}</span>
           <div style={{flex:1,minWidth:0}}>
-            {ticker.isStory&&ticker.title && <div style={{fontSize:10,fontWeight:700,color:"#6f9ec9",marginBottom:2}}>{ticker.title}</div>}
+            {ticker.isStory && ticker.title && <div style={{fontSize:10,fontWeight:700,color:"#6f9ec9",marginBottom:2}}>{ticker.title}</div>}
             <div style={{fontSize:10,color:"#8a9aaa",lineHeight:1.5}}>{ticker.text}</div>
           </div>
-          <button onClick={() => { setTab("achievements"); setUnseenComms(0); }} style={{flexShrink:0,padding:"2px 8px",background:"#0d1a2e",border:"1px solid #1e3a5f",borderRadius:4,color:"#6f9ec9",fontSize:10,cursor:"pointer",fontWeight:600,position:"relative"}}>
-            {"Log"}
+          <button onClick={() => { setLogModal(true); setUnseenComms(0); }} style={{flexShrink:0,padding:"2px 8px",background:"#0d1a2e",border:"1px solid #1e3a5f",borderRadius:4,color:"#6f9ec9",fontSize:10,cursor:"pointer",fontWeight:600,position:"relative"}}>
+            Log
             {unseenComms>0 && <span style={{position:"absolute",top:-5,right:-5,background:"#eb5757",color:"#fff",borderRadius:8,fontSize:8,padding:"0 3px",lineHeight:"14px"}}>{unseenComms}</span>}
           </button>
           <button onClick={() => setTicker(null)} style={{position:"absolute",top:4,right:4,background:"none",border:"none",color:"#3a5a7a",cursor:"pointer",fontSize:10}}>X</button>
@@ -756,7 +836,7 @@ function App() {
       <div style={{display:"flex",gap:1,padding:"6px 4px 0",background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{flex:1,padding:"5px 1px",border:"none",borderRadius:"5px 5px 0 0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:9,fontWeight:tab===t?700:400,whiteSpace:"nowrap"}}>
-            {t==="achievements"?"Achieve":t==="knowledge"?"Know":t==="support"?"Support":t==="launch"?"Launch":t.charAt(0).toUpperCase()+t.slice(1)}
+            {t==="achievements"?"Achievements":t==="knowledge"?"Knowledge":t==="support"?"Support":t==="launch"?"Launch":t.charAt(0).toUpperCase()+t.slice(1)}
           </button>
         ))}
       </div>
@@ -767,14 +847,16 @@ function App() {
         {tab==="build" && (
           <div style={{display:"grid",gridTemplateColumns:"repeat("+resCols.length+",1fr)",gap:5}}>
             {resCols.map(rk => {
-              const ri = RES[rk];
+              const ri   = RES[rk];
               const blds = visBuildings.filter(b => b.res===rk || Object.keys(b.prod).includes(rk));
               return (
                 <div key={rk} style={{background:COL_BG[rk],border:"1px solid "+COL_BORDER[rk],borderRadius:8,padding:"5px 4px",display:"flex",flexDirection:"column",gap:4}}>
                   <div style={{textAlign:"center",fontSize:11,fontWeight:700,color:ri.color,paddingBottom:3,borderBottom:"1px solid "+COL_BORDER[rk]}}>{ri.icon+" "+ri.label}</div>
                   {blds.map(b => {
-                    const cost=buildingCost(b), afford=canAfford(cost), owned=buildings[b.id]||0;
-                    const wait = !afford ? timeToAfford(res,prod,cost) : null;
+                    const cost  = buildingCost(b);
+                    const afford = canAfford(cost);
+                    const owned  = buildings[b.id] || 0;
+                    const wait   = !afford ? timeToAfford(res, prod, cost) : null;
                     return (
                       <div key={b.id} style={{background:"#080d1a",border:"1px solid "+(afford?"#1e4a7f":"#0d1a2e"),borderRadius:6,padding:"5px 6px",opacity:afford||owned?1:0.5,display:"flex",flexDirection:"column",gap:2}}>
                         <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -784,7 +866,7 @@ function App() {
                         <div style={{fontSize:8,color:"#4a6a8a"}}>{b.desc.slice(0,50)+(b.desc.length>50?"...":"")}</div>
                         <div style={{fontSize:8,color:"#4a7a9a"}}>{Object.entries(b.prod).map(([k,v]) => "+"+( v*Math.max(owned,1)).toFixed(1)+RES[k].icon+"/s").join(" ")}</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(cost).map(([k,v]) => chip((res[k]||0)>=v, RES[k].icon+FMT(v)))}</div>
-                        {wait!==null&&isFinite(wait) && <div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+                        {wait!==null && isFinite(wait) && <div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
                         <div style={{display:"flex",gap:2}}>
                           <button onClick={() => buyBuilding(b)} style={{flex:1,padding:"2px 0",borderRadius:3,border:"1px solid "+(afford?"#1e4a8f":"#0d1a2e"),background:afford?"#0d2a4a":"#080d1a",color:afford?"#4a9eff":"#1a3a5a",cursor:afford?"pointer":"not-allowed",fontSize:10,fontWeight:700}}>Buy</button>
                           <button onClick={() => sellBuilding(b)} style={{flex:1,padding:"2px 0",borderRadius:3,border:"1px solid "+(owned?"#5a1515":"#0d1a2e"),background:owned?"#2a0d0d":"#080d1a",color:owned?"#eb5757":"#1a3a5a",cursor:owned?"pointer":"not-allowed",fontSize:10,fontWeight:700}}>Sell</button>
@@ -801,25 +883,26 @@ function App() {
         {tab==="upgrade" && (
           <div style={{display:"grid",gridTemplateColumns:"repeat("+resCols.length+",1fr)",gap:5}}>
             {resCols.map(rk => {
-              const ri = RES[rk];
-              const col = visUpgrades.filter(u => Object.keys(u.cost).includes(rk)||Object.keys(u.req).includes(rk));
+              const ri  = RES[rk];
+              const col = visUpgrades.filter(u => Object.keys(u.cost).includes(rk) || Object.keys(u.req).includes(rk));
               return (
                 <div key={rk} style={{background:COL_BG[rk],border:"1px solid "+COL_BORDER[rk],borderRadius:8,padding:"5px 4px",display:"flex",flexDirection:"column",gap:4}}>
                   <div style={{textAlign:"center",fontSize:11,fontWeight:700,color:ri.color,paddingBottom:3,borderBottom:"1px solid "+COL_BORDER[rk]}}>{ri.icon+" "+ri.label}</div>
                   {col.map(u => {
-                    const owned=upgrades.includes(u.id), afford=canAfford(u.cost);
-                    const req=Object.entries(u.req).every(([k,v]) => (totalRes[k]||0)>=v);
-                    const wait=(!owned&&req&&!afford)?timeToAfford(res,prod,u.cost):null;
+                    const owned  = upgrades.includes(u.id);
+                    const afford = canAfford(u.cost);
+                    const req    = Object.entries(u.req).every(([k,v]) => (totalRes[k]||0)>=v);
+                    const wait   = (!owned && req && !afford) ? timeToAfford(res, prod, u.cost) : null;
                     return (
                       <div key={u.id} onClick={() => buyUpgrade(u)} style={{background:"#080d1a",border:"1px solid "+(owned?"#1a4a1a":afford&&req?"#1e4a7f":"#0d1a2e"),borderRadius:6,padding:"5px 6px",opacity:owned||req?1:0.45,cursor:!owned&&req?"pointer":"default",display:"flex",flexDirection:"column",gap:2}}>
                         <div style={{display:"flex",justifyContent:"space-between"}}>
                           <span style={{fontSize:10,fontWeight:700,color:owned?"#6fcf97":"#c8d8f0",flex:1}}>{u.layer===3?"🌌 ":u.layer===2?"🛸 ":""}{u.name}</span>
-                          {owned && <span style={{color:"#6fcf97",fontSize:11}}>✓</span>}
+                          {owned && <span style={{color:"#6fcf97",fontSize:11}}>V</span>}
                         </div>
                         <div style={{fontSize:8,color:"#4a7a9a"}}>{u.effect}</div>
-                        {!req && <div style={{fontSize:8,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v]) => FMT(v)+RES[k].icon).join(" + ")}</div>}
-                        {req&&!owned && <div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v]) => chip((res[k]||0)>=v, RES[k].icon+FMT(v)))}</div>}
-                        {wait!==null&&isFinite(wait) && <div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+                        {!req   && <div style={{fontSize:8,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v]) => FMT(v)+RES[k].icon).join(" + ")}</div>}
+                        {req && !owned && <div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v]) => chip((res[k]||0)>=v, RES[k].icon+FMT(v)))}</div>}
+                        {wait!==null && isFinite(wait) && <div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
                       </div>
                     );
                   })}
@@ -834,7 +917,8 @@ function App() {
         {tab==="achievements" && (
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:5}}>
             {ACHIEVEMENTS.map(a => {
-              const done=achievements.includes(a.id), isMilestone=!!MILESTONE_ACH[a.id];
+              const done       = achievements.includes(a.id);
+              const isMilestone = !!MILESTONE_ACH[a.id];
               return (
                 <div key={a.id} style={{background:"#0a1525",border:"1px solid "+(done?isMilestone?"#6a4a1a":"#2a4a1a":"#152030"),borderRadius:8,padding:"7px 10px",opacity:done?1:0.45}}>
                   <div style={{fontSize:14,marginBottom:2,display:"flex",alignItems:"center",gap:5}}>
@@ -853,10 +937,10 @@ function App() {
           <div style={{textAlign:"center",padding:"10px 0"}}>
             <div style={{fontSize:40,marginBottom:8}}>🚀</div>
             <div style={{fontSize:16,fontWeight:700,color:"#a0c4ff",marginBottom:4}}>Colony Ship Program</div>
-            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:12,maxWidth:380,margin:"0 auto 12px",lineHeight:1.6}}>Build the Colony Ship (Layer 3) to launch to a new world. Cross-branch knowledge survives. 1.5x bonus stacks each run.</div>
+            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:12,maxWidth:380,margin:"0 auto 12px",lineHeight:1.6}}>Build the Colony Ship in Layer 3 to launch to a new world. Cross-branch knowledge survives. 1.5x bonus stacks each run.</div>
             {milestones.length>0 && (
               <div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center",marginBottom:12}}>
-                {milestones.map(mid => { const m=MILESTONES_DEF.find(x=>x.id===mid); return m ? <div key={mid} style={{background:"#0a1220",border:"1px solid "+m.color,borderRadius:6,padding:"3px 8px",fontSize:10,color:m.color}}>{m.badge+" "+m.name}</div> : null; })}
+                {milestones.map(mid => { const m=MILESTONES_DEF.find(x=>x.id===mid); return m?<div key={mid} style={{background:"#0a1220",border:"1px solid "+m.color,borderRadius:6,padding:"3px 8px",fontSize:10,color:m.color}}>{m.badge+" "+m.name}</div>:null; })}
               </div>
             )}
             <div style={{background:"#080d1a",borderRadius:8,padding:"10px 14px",marginBottom:12,border:"1px solid #1e3a5f",maxWidth:340,margin:"0 auto 12px",textAlign:"left"}}>
@@ -888,6 +972,6 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-  </script>
+</script>
 </body>
 </html>
