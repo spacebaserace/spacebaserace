@@ -138,6 +138,7 @@ Merge `dev` → `main` to trigger deployment.
 
 ## Known Bugs
 
+- **In-game Patch Notes out of sync with readme changelog** — the Patch Notes tab inside the game does not match the versioned changelog in the readme. Both should be kept in sync whenever a new version ships.
 - **Hold-to-Generate blocks passive production (early game)** — holding a resource click button to generate that resource pauses passive production for all other resources. Only noticeable in early game before buildings generate enough to mask it. Root cause: the hold timer loop likely blocks the production tick.
 
 ---
