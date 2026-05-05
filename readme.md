@@ -153,6 +153,7 @@ Features planned for future runs:
 - **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability.
 
 ### Feel & Polish
+- **Version Number in Support Menu** — display the current version number (e.g. "v0.9.1") in the support/patch notes modal so players always know what build they're on.
 
 ### Accessibility & Platform
 - **Mobile / Touchscreen Friendly** — responsive layout and touch-optimized controls so the game plays well on phones and tablets.
