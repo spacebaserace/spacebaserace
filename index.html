@@ -33,6 +33,80 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
   .tab-label-know-short::after{content:"Knowledge";}
   .tab-label-ach-short::after{content:"Achievements";}
 }
+
+/* Click button effects */
+.click-btn-wrap{position:relative;display:inline-flex;}
+.click-ring{position:absolute;top:50%;left:50%;border-radius:50%;border:2px solid currentColor;pointer-events:none;transform:translate(-50%,-50%) scale(0.8);opacity:0.85;animation:ringExpand 0.55s ease-out forwards;}
+@keyframes ringExpand{
+  0%  {transform:translate(-50%,-50%) scale(0.6);opacity:0.9;}
+  100%{transform:translate(-50%,-50%) scale(2.2);opacity:0;}
+}
+.click-pulse{animation:btnPulse 0.18s ease-out;}
+@keyframes btnPulse{
+  0%  {transform:scale(1);}
+  40% {transform:scale(1.12);}
+  100%{transform:scale(1);}
+}
+
+/* Particle burst */
+.click-particles{position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:none;}
+.click-particles span{position:absolute;width:6px;height:6px;border-radius:50%;background:currentColor;top:-3px;left:-3px;box-shadow:0 0 6px currentColor;opacity:0;animation:particleFly 0.6s ease-out forwards;}
+.click-particles span:nth-child(1){--tx: 38px;--ty:   0px;}
+.click-particles span:nth-child(2){--tx: 27px;--ty: -27px;}
+.click-particles span:nth-child(3){--tx:  0px;--ty: -38px;}
+.click-particles span:nth-child(4){--tx:-27px;--ty: -27px;}
+.click-particles span:nth-child(5){--tx:-38px;--ty:   0px;}
+.click-particles span:nth-child(6){--tx:-27px;--ty:  27px;}
+.click-particles span:nth-child(7){--tx:  0px;--ty:  38px;}
+.click-particles span:nth-child(8){--tx: 27px;--ty:  27px;}
+@keyframes particleFly{
+  0%  {transform:translate(0,0) scale(0.6);opacity:1;}
+  60% {opacity:1;}
+  100%{transform:translate(var(--tx), var(--ty)) scale(0.2);opacity:0;}
+}
+
+/* Layer transition cinematic */
+.layer-transition{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#000;animation:layerFade 3.2s ease-in-out forwards;pointer-events:none;}
+@keyframes layerFade{
+  0%   {opacity:0;}
+  10%  {opacity:1;}
+  85%  {opacity:1;}
+  100% {opacity:0;}
+}
+.layer-transition .lt-icon{font-size:120px;animation:ltIcon 3.2s ease-out forwards;}
+.layer-transition .lt-name{font-size:28px;font-weight:700;letter-spacing:6px;margin-top:18px;opacity:0;animation:ltName 3.2s ease-out forwards;}
+.layer-transition .lt-sub{font-size:13px;letter-spacing:3px;color:#5a7a9a;margin-top:8px;opacity:0;animation:ltSub 3.2s ease-out forwards;}
+@keyframes ltIcon{
+  0%   {transform:scale(0.3) rotate(-30deg);opacity:0;}
+  20%  {transform:scale(1.2) rotate(0deg);opacity:1;}
+  35%  {transform:scale(1) rotate(0deg);opacity:1;}
+  90%  {transform:scale(1) rotate(0deg);opacity:1;}
+  100% {transform:scale(1.4) rotate(0deg);opacity:0;}
+}
+@keyframes ltName{
+  0%,25% {opacity:0;letter-spacing:20px;}
+  45%    {opacity:1;letter-spacing:6px;}
+  90%    {opacity:1;letter-spacing:6px;}
+  100%   {opacity:0;letter-spacing:6px;}
+}
+@keyframes ltSub{
+  0%,40% {opacity:0;}
+  60%    {opacity:1;}
+  90%    {opacity:1;}
+  100%   {opacity:0;}
+}
+.layer-stars{position:absolute;inset:0;background:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 60%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 80%,#fff,transparent),radial-gradient(1px 1px at 85% 25%,#fff,transparent),radial-gradient(2px 2px at 15% 65%,#fff,transparent),radial-gradient(1px 1px at 55% 15%,#fff,transparent),radial-gradient(1.5px 1.5px at 90% 90%,#fff,transparent);opacity:0.6;}
+
+/* XP popups */
+.xp-popup-stack{position:fixed;top:64px;right:8px;z-index:1500;display:flex;flex-direction:column;gap:4px;align-items:flex-end;pointer-events:none;}
+.xp-popup{background:#0a1a30dd;border:1px solid #6f9ec9;border-left:3px solid #e6a817;border-radius:6px;padding:5px 10px;color:#e6a817;font-weight:700;font-size:12px;white-space:nowrap;opacity:0;transform:translateX(60px);animation:xpFly 1.8s ease-out forwards;backdrop-filter:blur(4px);box-shadow:0 2px 12px #0008;}
+.xp-popup .xp-reason{color:#a0c4ff;font-weight:400;font-size:10px;margin-left:6px;}
+@keyframes xpFly{
+  0%   {opacity:0; transform:translateX(60px);}
+  15%  {opacity:1; transform:translateX(0);}
+  75%  {opacity:1; transform:translateX(0);}
+  100% {opacity:0; transform:translateX(-20px);}
+}
 </style>
 </head>
 <body>
@@ -68,6 +142,275 @@ const initBuildings = () => ({});
 const isSingleRes  = b => !b.cost && Object.keys(b.prod).length===1;
 const isMultiRes   = b => b.cost || Object.keys(b.prod).length>1;
 
+// ── Audio Engine ───────────────────────────────────────────────────────────
+const AudioEngine = (() => {
+  let ctx = null, masterGain = null, sfxGain = null, musicGain = null;
+  let musicNodes = [], musicStarted = false;
+  const settings = {master:0.6, sfx:0.7, music:0.35, muted:false};
+  try {
+    const saved = localStorage.getItem("sbr_audio");
+    if (saved) Object.assign(settings, JSON.parse(saved));
+  } catch(e){}
+  const save = () => { try{localStorage.setItem("sbr_audio",JSON.stringify(settings));}catch(e){} };
+
+  const ensure = () => {
+    if (ctx) return ctx;
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain(); masterGain.gain.value = settings.muted?0:settings.master;
+      sfxGain    = ctx.createGain(); sfxGain.gain.value = settings.sfx;
+      musicGain  = ctx.createGain(); musicGain.gain.value = settings.music;
+      sfxGain.connect(masterGain); musicGain.connect(masterGain); masterGain.connect(ctx.destination);
+    } catch(e){ ctx = null; }
+    return ctx;
+  };
+  const resume = () => { const c=ensure(); if(c&&c.state==="suspended") c.resume(); };
+
+  const tone = (freq, dur, type="sine", vol=0.3, attack=0.005, decay=null) => {
+    const c = ensure(); if (!c) return;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    const t = c.currentTime, dEnd = decay||dur;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t+attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dEnd);
+    osc.connect(g); g.connect(sfxGain);
+    osc.start(t); osc.stop(t+dEnd+0.05);
+  };
+  const noise = (dur, vol=0.2, filterFreq=2000) => {
+    const c = ensure(); if (!c) return;
+    const buf = c.createBuffer(1, c.sampleRate*dur, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1)*Math.exp(-i/(data.length*0.3));
+    const src = c.createBufferSource(); src.buffer = buf;
+    const filter = c.createBiquadFilter(); filter.type="lowpass"; filter.frequency.value=filterFreq;
+    const g = c.createGain(); g.gain.value = vol;
+    src.connect(filter); filter.connect(g); g.connect(sfxGain);
+    src.start();
+  };
+  const sweep = (f1, f2, dur, type="sine", vol=0.3) => {
+    const c = ensure(); if (!c) return;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(f1, c.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(f2, c.currentTime+dur);
+    g.gain.setValueAtTime(vol, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+dur);
+    osc.connect(g); g.connect(sfxGain);
+    osc.start(); osc.stop(c.currentTime+dur+0.05);
+  };
+
+  // SFX library — different freq per resource for variety
+  const RES_FREQS = {energy:660, minerals:330, research:520, population:440, fuel:280};
+  const sfx = {
+    click: (resType="energy") => {
+      const f = RES_FREQS[resType] || 440;
+      tone(f, 0.06, "triangle", 0.18, 0.002, 0.08);
+      tone(f*2, 0.04, "sine", 0.08, 0.002, 0.05);
+    },
+    buy:    () => { tone(523, 0.08, "triangle", 0.22); setTimeout(()=>tone(784, 0.12, "triangle", 0.18), 50); },
+    sell:   () => { tone(440, 0.1, "sawtooth", 0.15); setTimeout(()=>tone(330, 0.12, "sawtooth", 0.12), 60); },
+    achieve:() => { [523, 659, 784, 1047].forEach((f,i)=>setTimeout(()=>tone(f, 0.18, "triangle", 0.2),i*80)); },
+    layerUp:() => { [261, 329, 392, 523, 659, 784].forEach((f,i)=>setTimeout(()=>tone(f, 0.3, "triangle", 0.25),i*100)); noise(0.5, 0.08, 800); },
+    launch: () => {
+      sweep(80, 30, 2.5, "sawtooth", 0.35); noise(2.5, 0.18, 500);
+      setTimeout(()=>{ [523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>tone(f, 0.5, "triangle", 0.22),i*150)); }, 1500);
+    },
+    offline:() => { tone(587, 0.15, "sine", 0.2); setTimeout(()=>tone(880, 0.2, "sine", 0.18), 100); setTimeout(()=>tone(1175, 0.25, "sine", 0.16), 220); },
+    knowledge:() => { tone(880, 0.1, "sine", 0.18); setTimeout(()=>tone(1175, 0.12, "sine", 0.16), 60); setTimeout(()=>tone(1568, 0.15, "sine", 0.14), 130); },
+    error:  () => { tone(220, 0.08, "square", 0.12); setTimeout(()=>tone(180, 0.1, "square", 0.1), 50); },
+    pause:  () => { sweep(880, 220, 0.3, "sine", 0.18); },
+    resume: () => { sweep(220, 880, 0.3, "sine", 0.18); },
+  };
+
+  const play = (name, ...args) => {
+    if (settings.muted) return;
+    const c = ensure(); if (!c) return;
+    if (c.state==="suspended") c.resume();
+    if (sfx[name]) sfx[name](...args);
+  };
+
+  // Ambient music — slow evolving pad with layer-aware tonality
+  const startMusic = () => {
+    const c = ensure(); if (!c || musicStarted) return;
+    musicStarted = true;
+    // Three detuned oscillators for a rich pad
+    const freqs = [110, 165, 220]; // A2, E3, A3
+    freqs.forEach((f, i) => {
+      const osc = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lfoG = c.createGain();
+      osc.type = "sine"; osc.frequency.value = f;
+      g.gain.value = 0.06;
+      lfo.frequency.value = 0.05 + i*0.03; lfoG.gain.value = 0.03;
+      lfo.connect(lfoG); lfoG.connect(g.gain);
+      const filter = c.createBiquadFilter(); filter.type="lowpass"; filter.frequency.value = 800; filter.Q.value=1.5;
+      osc.connect(filter); filter.connect(g); g.connect(musicGain);
+      osc.start(); lfo.start();
+      musicNodes.push(osc, lfo);
+    });
+    // Slow shimmer
+    const shimmer = c.createOscillator(), sg = c.createGain(), sLfo = c.createOscillator(), sLfoG = c.createGain();
+    shimmer.type = "triangle"; shimmer.frequency.value = 880;
+    sg.gain.value = 0.012;
+    sLfo.frequency.value = 0.08; sLfoG.gain.value = 0.008;
+    sLfo.connect(sLfoG); sLfoG.connect(sg.gain);
+    shimmer.connect(sg); sg.connect(musicGain);
+    shimmer.start(); sLfo.start();
+    musicNodes.push(shimmer, sLfo);
+  };
+  const stopMusic = () => {
+    musicNodes.forEach(n=>{ try{n.stop();}catch(e){} });
+    musicNodes = []; musicStarted = false;
+  };
+
+  const setMaster = v => { settings.master=v; if(masterGain&&!settings.muted) masterGain.gain.value=v; save(); };
+  const setSfx    = v => { settings.sfx=v; if(sfxGain) sfxGain.gain.value=v; save(); };
+  const setMusic  = v => { settings.music=v; if(musicGain) musicGain.gain.value=v; save(); };
+  const setMuted  = m => { settings.muted=m; if(masterGain) masterGain.gain.value=m?0:settings.master; save(); };
+  const getSettings = () => ({...settings});
+
+  return {play, resume, startMusic, stopMusic, setMaster, setSfx, setMusic, setMuted, getSettings};
+})();
+
+// ── XP Store ───────────────────────────────────────────────────────────────
+const XPStore = (() => {
+  const KEY = "sbr_xp_v1";
+  const defaults = {
+    xp: 0,
+    totalEarned: 0,             // lifetime XP earned, never decreases
+    ownedRanks: [],             // rank ids
+    equippedRank: null,         // rank id or null
+    firstTime: {                // one-time flags, never reset
+      buildings: {},            // id -> true
+      upgrades: {},             // id -> true
+      layers: {},               // 2|3 -> true
+      storyEvents: {},          // id -> true
+      planets: {},              // planet name -> true
+    },
+    bestRunSecs: null,          // fastest colony ship launch
+    dailyStreak: 0,
+    lastDailyDate: null,        // YYYY-MM-DD
+    achievementUnlocks: {       // mirror of in-game achievements for first-time XP
+      naked: false,
+    },
+    totalLaunches: 0,           // every Colony Ship launch
+    everLaunchedWithRank: false,// has the player ever launched with any rank equipped
+    runningNakedDone: false,    // has the player launched without a rank, after first launching with one
+  };
+  let state = {...defaults};
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // shallow merge with defaults so new fields appear safely
+      state = {...defaults, ...parsed,
+        firstTime: {...defaults.firstTime, ...(parsed.firstTime||{})},
+        achievementUnlocks: {...defaults.achievementUnlocks, ...(parsed.achievementUnlocks||{})},
+      };
+    }
+  } catch(e){}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} };
+  const get = () => ({...state, firstTime:{...state.firstTime}, ownedRanks:[...state.ownedRanks]});
+  const award = (n, _reason) => { if (!n||n<=0) return 0; state.xp += n; state.totalEarned += n; save(); return n; };
+  const spend = n => { if (state.xp < n) return false; state.xp -= n; save(); return true; };
+  const ownRank = id => { if (!state.ownedRanks.includes(id)) { state.ownedRanks.push(id); save(); } };
+  const equipRank = id => { state.equippedRank = id; save(); };
+  const markFirst = (group, id) => {
+    if (!state.firstTime[group]) state.firstTime[group] = {};
+    if (state.firstTime[group][id]) return false;
+    state.firstTime[group][id] = true; save(); return true;
+  };
+  const setBest = secs => { if (state.bestRunSecs === null || secs < state.bestRunSecs) { const prev = state.bestRunSecs; state.bestRunSecs = secs; save(); return prev; } return null; };
+  const checkDaily = () => {
+    const today = new Date().toISOString().slice(0,10);
+    if (state.lastDailyDate === today) return {awarded:0, streak:state.dailyStreak};
+    const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if (state.lastDailyDate === yesterday) state.dailyStreak += 1;
+    else state.dailyStreak = 1;
+    state.lastDailyDate = today;
+    save();
+    return {awarded:state.dailyStreak*10, streak:state.dailyStreak};
+  };
+  const markAchievement = id => { if (state.achievementUnlocks[id]) return false; state.achievementUnlocks[id]=true; save(); return true; };
+  const recordLaunch = (rankIdAtLaunch) => {
+    state.totalLaunches += 1;
+    let nakedJustHappened = false;
+    if (rankIdAtLaunch) {
+      state.everLaunchedWithRank = true;
+    } else if (state.everLaunchedWithRank && !state.runningNakedDone) {
+      state.runningNakedDone = true;
+      nakedJustHappened = true;
+    }
+    save();
+    return {totalLaunches: state.totalLaunches, nakedJustHappened};
+  };
+  const reset = () => { state = JSON.parse(JSON.stringify(defaults)); save(); };
+  return {get, award, spend, ownRank, equipRank, markFirst, setBest, checkDaily, markAchievement, recordLaunch, reset};
+})();
+
+// ── Ranks (v0.6: Common + Uncommon only) ────────────────────────────────────
+const RANK_TIERS = {
+  common:   {label:"Common",   color:"#9aa8b8", border:"#3a4a5a"},
+  uncommon: {label:"Uncommon", color:"#6fcf97", border:"#2a5a3a"},
+  rare:     {label:"Rare",     color:"#6f9ec9", border:"#2a4a6a"}, // reserved for v0.7
+  legendary:{label:"Legendary",color:"#e6a817", border:"#5a4a1a"},
+  mythic:   {label:"Mythic",   color:"#b07ec9", border:"#4a2a5a"},
+};
+
+// effects schema:
+//   prodMult: {all?:n, energy?:n, ...}  (multiplicative, 1.10 = +10%)
+//   clickMult: n                        (multiplicative)
+//   buildingCostMult: n                 (multiplicative on full cost)
+//   sellRefundPct: 0..1                 (overrides default 0.5)
+//   startResources: {res:n, ...}        (added at start of each new run)
+//   special: string                     (handled in code by id where needed)
+const RANKS = [
+  // ── Common ──
+  {id:"foreman",     tier:"common", icon:"🛠",  name:"Foreman",        cost:250,   effect:{prodMult:{all:1.10}}, desc:"+10% all production"},
+  {id:"quartermaster",tier:"common",icon:"📦", name:"Quartermaster",  cost:400,   effect:{clickMult:1.25},      desc:"+25% click power"},
+  {id:"power_eng",   tier:"common", icon:"⚡", name:"Power Engineer", cost:800,   effect:{prodMult:{energy:1.15}}, desc:"+15% energy production"},
+  {id:"driller",     tier:"common", icon:"⛏", name:"Driller",        cost:800,   effect:{prodMult:{minerals:1.15}}, desc:"+15% minerals production"},
+  {id:"archivist",   tier:"common", icon:"🔬", name:"Archivist",      cost:800,   effect:{prodMult:{research:1.15}}, desc:"+15% research production"},
+  {id:"demographer", tier:"common", icon:"👥", name:"Demographer",    cost:800,   effect:{prodMult:{population:1.15}}, desc:"+15% population production"},
+  {id:"propulsion",  tier:"common", icon:"⛽", name:"Propulsion Tech",cost:1000,  effect:{prodMult:{fuel:1.15}}, desc:"+15% fuel production"},
+  {id:"logistician", tier:"common", icon:"📋", name:"Logistician",    cost:600,   effect:{buildingCostMult:0.95}, desc:"Buildings cost 5% less"},
+  {id:"surveyor",    tier:"common", icon:"🧭", name:"Surveyor",       cost:1200,  effect:{startResources:{energy:100,minerals:100,research:100,population:100,fuel:100}}, desc:"Start runs with 100 of every resource"},
+  {id:"auditor",     tier:"common", icon:"📊", name:"Auditor",        cost:1500,  effect:{sellRefundPct:0.75}, desc:"Sells refund 75% (vs 50%)"},
+  {id:"daves_cousin",tier:"common", icon:"🤡", name:"Dave's Cousin",  cost:900,   effect:{prodMult:{all:1.05}, special:"daves_cousin"}, desc:"+5% all production. Every 60s a random building stops for 1s. He means well."},
+  {id:"intern",      tier:"common", icon:"🎓", name:"The Intern",     cost:700,   effect:{clickMult:1.20, special:"intern"}, desc:"+20% click power. Every 25th click does nothing. Still learning."},
+  // ── Uncommon ──
+  {id:"vet_foreman", tier:"uncommon",icon:"🪖",name:"Veteran Foreman",cost:2500,  effect:{prodMult:{all:1.25}}, desc:"+25% all production"},
+  {id:"speedrunner", tier:"uncommon",icon:"🏃",name:"Speed Runner",   cost:3500,  effect:{clickMult:1.50, prodMult:{all:0.95}}, desc:"+50% click power, -5% all production"},
+  {id:"investor",    tier:"uncommon",icon:"💼",name:"Patient Investor",cost:5500, effect:{special:"investor"}, desc:"Offline cap raised to 16h, +20% offline rate"},
+  {id:"k_hunter",    tier:"uncommon",icon:"🧠",name:"Knowledge Hunter",cost:6500, effect:{knowledgeCostMult:0.70}, desc:"Knowledge nodes cost 30% less"},
+  {id:"workhorse",   tier:"uncommon",icon:"🐴",name:"Workhorse",      cost:7500,  effect:{prodMult:{all:1.50}, buildingCostMult:1.25}, desc:"+50% production, +25% building costs"},
+  {id:"optimist",    tier:"uncommon",icon:"😊",name:"The Optimist",   cost:3000,  effect:{special:"optimist"}, desc:"+30% production for first 10 min of each run, then +5%"},
+  {id:"coffee",      tier:"uncommon",icon:"☕",name:"Coffee Addict",  cost:4000,  effect:{special:"coffee"}, desc:"+100% click power for first 60s of each run, then 0% bonus"},
+  {id:"beans",       tier:"uncommon",icon:"🫘",name:"Beans McGraw, Esq.",cost:5000,effect:{sellRefundPct:1.0, special:"beans"}, desc:"Sells refund 100%. He has friends in low places."},
+  // ── Rare ──
+  {id:"pioneer",     tier:"rare",   icon:"🚩", name:"Pioneer",        cost:12000, effect:{special:"pioneer"}, desc:"Start each run with 5 of every Layer-1 tier-1 building"},
+  {id:"industrialist",tier:"rare",  icon:"🏭", name:"Industrialist",  cost:15000, effect:{special:"industrialist"}, desc:"Building costs scale 1.13× per copy (vs 1.15×). Compounds hard late game."},
+  {id:"atomic_scholar",tier:"rare", icon:"⚛", name:"Atomic Scholar", cost:18000, effect:{prodMult:{research:1.30}, special:"atomic_scholar"}, desc:"+30% research, knowledge unlocks award 2× XP"},
+  {id:"lucky",       tier:"rare",   icon:"🍀", name:"Lucky Breaker",  cost:20000, effect:{special:"lucky"}, desc:"5% chance every click yields 10× resources"},
+  {id:"layer_skip",  tier:"rare",   icon:"⏭", name:"Layer Skipper",  cost:25000, effect:{special:"layer_skip"}, desc:"Terraformer and Station Dock cost half"},
+  {id:"hoarder",     tier:"rare",   icon:"💎", name:"The Hoarder",    cost:18000, effect:{special:"hoarder"}, desc:"+1% production per 100 minerals held (capped +50%). Spending hurts."},
+  {id:"static_cling",tier:"rare",   icon:"⚡", name:"Static Cling",   cost:22000, effect:{special:"static_cling"}, desc:"Every click also generates 25% of all OTHER resources. Cross-contamination."},
+  // ── Legendary ──
+  {id:"architect",   tier:"legendary",icon:"📐",name:"Architect",     cost:40000, effect:{prodMult:{all:1.75}, clickMult:1.50}, desc:"+75% all production, +50% click power"},
+  {id:"hivemind",    tier:"legendary",icon:"🧠",name:"Hivemind",      cost:55000, effect:{special:"hivemind"}, desc:"Population also produces every other resource at 25% rate"},
+  {id:"timelord",    tier:"legendary",icon:"⏳",name:"Time Lord",     cost:70000, effect:{prodMult:{all:1.50}, special:"timelord"}, desc:"Game runs at 1.5× speed (production + offline)"},
+  {id:"dyson_heir",  tier:"legendary",icon:"☀",name:"Dyson Heir",    cost:80000, effect:{prodMult:{all:1.10}, special:"dyson_heir"}, desc:"Energy buildings produce 3×, all others +10%"},
+  {id:"heavyweight", tier:"legendary",icon:"🛌",name:"Heavyweight",   cost:75000, effect:{prodMult:{all:3.0}, special:"heavyweight"}, desc:"+200% all production. Click power becomes 0. I don't get out of bed for less than three times the work."},
+  {id:"glasscannon", tier:"legendary",icon:"🥀",name:"Glass Cannon",  cost:60000, effect:{prodMult:{all:2.50}, special:"glasscannon"}, desc:"+150% all production. Every 5 min, a random building's count is halved. Risky AF."},
+  // ── Mythic ──
+  {id:"stellar_council",tier:"mythic",icon:"🌟",name:"Stellar Council",cost:150000,effect:{prodMult:{all:2.0}, clickMult:2.0, special:"stellar_council"}, desc:"2× all production, 2× click power, 2× XP gain"},
+  {id:"architect_prime",tier:"mythic",icon:"🏛",name:"The Architect Prime",cost:250000,effect:{special:"architect_prime"}, desc:"Start each run at Layer 2 with 1 of every Layer-1 building (incl. Terraformer)"},
+  {id:"lonely_astronaut",tier:"mythic",icon:"👨‍🚀",name:"The Lonely Astronaut",cost:200000,effect:{prodMult:{all:6.0}, special:"lonely_astronaut"}, desc:"+500% production. Population locked at 0. Cannot win — solo flight trophy."},
+  // ── Secret (hidden until condition met) ──
+  {id:"sec_dave",    tier:"mythic", icon:"🕵", name:"Dave",           cost:25000, secret:true, unlockCheck:(ctx)=>ctx.totalLaunches>=5, effect:{prodMult:{all:1.20}, special:"dave_lore"}, desc:"+20% production. Story log gains Dave's notes."},
+  {id:"sec_naked",   tier:"mythic", icon:"🩲", name:"The Naked Engineer",cost:30000,secret:true,unlockCheck:(ctx)=>ctx.runningNakedDone, effect:{prodMult:{all:1.50}, special:"naked_engineer"}, desc:"+50% production — but only counts as 'no rank' for naked-run achievements. The cleanest cheat."},
+  {id:"sec_echo",    tier:"mythic", icon:"🌌", name:"Echo of the First Colony",cost:50000,secret:true,unlockCheck:(ctx)=>ctx.uniquePlanets>=10, effect:{special:"echo"}, desc:"+10% production per unique planet visited (max +100%)"},
+];
+const RANKS_BY_ID = Object.fromEntries(RANKS.map(r=>[r.id,r]));
+
 const RES = {
   energy:    {label:"Energy",     icon:"⚡",color:"#e6a817"},
   minerals:  {label:"Minerals",   icon:"⛏", color:"#7c9e6f"},
@@ -81,22 +424,30 @@ const BUILDINGS = {
   drill:       {id:"drill",       layer:1,name:"Drill Rig",         res:"minerals",  base:12,  prod:{minerals:0.5},                       tier:1,desc:"Bores deep into the crust for raw ore.",                   multi:false},
   lab:         {id:"lab",         layer:1,name:"Research Lab",      res:"research",  base:12,  prod:{research:0.5},                       tier:1,desc:"Staffed 24/7 by slightly caffeinated scientists.",         multi:false},
   habitat:     {id:"habitat",     layer:1,name:"Habitat Dome",      res:"population",base:12,  prod:{population:0.5},                     tier:1,desc:"Pressurized living quarters for colonists.",               multi:false},
-  refinery:    {id:"refinery",    layer:1,name:"Refinery",          res:"energy",    base:120, prod:{energy:3,minerals:2},                tier:2,cost:{energy:80,minerals:80},       desc:"Plasma-smelts ore into usable energy.",                   multi:true},
-  medbay:      {id:"medbay",      layer:1,name:"Med Bay",           res:"population",base:150, prod:{research:2,population:3},            tier:2,cost:{research:100,population:100}, desc:"Heals colonists and generates medical data.",             multi:true},
-  greenhouse:  {id:"greenhouse",  layer:1,name:"Greenhouse",        res:"population",base:200, prod:{population:1,research:0.5},          tier:2,cost:{energy:120,population:80},    desc:"Hydroponic farms sustaining colony growth.",              multi:true},
-  terraformer: {id:"terraformer", layer:1,name:"Terraformer",       res:"minerals",  base:600, prod:{energy:5,minerals:5,research:5},     tier:3,cost:{energy:400,minerals:400,research:300},desc:"Reshapes planetary geology. Unlocks orbital tier.",    multi:true},
+  refinery:    {id:"refinery",    layer:1,name:"Refinery",          res:"energy",    base:120, prod:{energy:3,minerals:2},                tier:2,cost:{energy:80,minerals:80},       desc:"Plasma-smelts ore into usable energy.",                   multi:true, requires:{drill:5}},
+  medbay:      {id:"medbay",      layer:1,name:"Med Bay",           res:"population",base:150, prod:{research:2,population:3},            tier:2,cost:{research:100,population:100}, desc:"Heals colonists and generates medical data.",             multi:true, requires:{habitat:5, lab:2}},
+  greenhouse:  {id:"greenhouse",  layer:1,name:"Greenhouse",        res:"population",base:200, prod:{population:1,research:0.5},          tier:2,cost:{energy:120,population:80},    desc:"Hydroponic farms sustaining colony growth.",              multi:true, requires:{habitat:3}},
+  terraformer: {id:"terraformer", layer:1,name:"Terraformer",       res:"minerals",  base:600, prod:{energy:5,minerals:5,research:5},     tier:3,cost:{energy:400,minerals:400,research:300},desc:"Reshapes planetary geology. Unlocks orbital tier.",    multi:true, requires:{refinery:1, greenhouse:1, medbay:1}},
   launchpad:   {id:"launchpad",   layer:2,name:"Launch Pad",        res:"fuel",      base:200, prod:{fuel:0.5},                           tier:1,cost:{energy:150,minerals:150},     desc:"Surface-to-orbit mass driver.",                           multi:false},
-  orbitallab:  {id:"orbitallab",  layer:2,name:"Orbital Lab",       res:"research",  base:250, prod:{research:1.5},                       tier:1,cost:{research:150,fuel:50},        desc:"Zero-gravity research station in low orbit.",             multi:false},
-  solarcollector:{id:"solarcollector",layer:2,name:"Solar Collector",res:"energy",   base:280, prod:{energy:2},                           tier:1,cost:{energy:200,minerals:100},     desc:"Unobstructed solar collection above atmosphere.",         multi:false},
-  oreprocessor:{id:"oreprocessor",layer:2,name:"Ore Processor",     res:"minerals",  base:300, prod:{minerals:2,fuel:0.3},                tier:2,cost:{minerals:200,fuel:80},        desc:"Orbital smelter processing asteroid ore.",                multi:true},
-  cryobay:     {id:"cryobay",     layer:2,name:"Cryo Bay",          res:"population",base:350, prod:{population:1,fuel:0.5},              tier:2,cost:{population:200,research:150}, desc:"Suspended-animation chambers for deep space crews.",      multi:true},
-  commandmodule:{id:"commandmodule",layer:2,name:"Command Module",  res:"fuel",      base:500, prod:{fuel:1,research:1,energy:1},         tier:2,cost:{energy:300,minerals:300,fuel:200},desc:"Orbital command and coordination hub.",                multi:true},
-  stationdock: {id:"stationdock", layer:2,name:"Station Dock",      res:"fuel",      base:800, prod:{fuel:3,minerals:2,energy:2},         tier:3,cost:{energy:500,minerals:500,fuel:300},desc:"Full orbital docking. Unlocks deep space.",             multi:true},
+  orbitallab:  {id:"orbitallab",  layer:2,name:"Orbital Lab",       res:"research",  base:250, prod:{research:1.5},                       tier:1,cost:{research:150,fuel:50},        desc:"Zero-gravity research station in low orbit.",             multi:false, requires:{launchpad:1}},
+  solarcollector:{id:"solarcollector",layer:2,name:"Solar Collector",res:"energy",   base:280, prod:{energy:2},                           tier:1,cost:{energy:200,minerals:100},     desc:"Unobstructed solar collection above atmosphere.",         multi:false, requires:{launchpad:1}},
+  oreprocessor:{id:"oreprocessor",layer:2,name:"Ore Processor",     res:"minerals",  base:300, prod:{minerals:2,fuel:0.3},                tier:2,cost:{minerals:200,fuel:80},        desc:"Orbital smelter processing asteroid ore.",                multi:true, requires:{launchpad:2}},
+  cryobay:     {id:"cryobay",     layer:2,name:"Cryo Bay",          res:"population",base:350, prod:{population:1,fuel:0.5},              tier:2,cost:{population:200,research:150}, desc:"Suspended-animation chambers for deep space crews.",      multi:true, requires:{orbitallab:1}},
+  commandmodule:{id:"commandmodule",layer:2,name:"Command Module",  res:"fuel",      base:500, prod:{fuel:1,research:1,energy:1},         tier:2,cost:{energy:300,minerals:300,fuel:200},desc:"Orbital command and coordination hub.",                multi:true, requires:{orbitallab:1, oreprocessor:1}},
+  stationdock: {id:"stationdock", layer:2,name:"Station Dock",      res:"fuel",      base:800, prod:{fuel:3,minerals:2,energy:2},         tier:3,cost:{energy:500,minerals:500,fuel:300},desc:"Full orbital docking. Unlocks deep space.",             multi:true, requires:{commandmodule:1}},
   probefactory:{id:"probefactory",layer:3,name:"Probe Factory",     res:"research",  base:500, prod:{research:3},                         tier:1,cost:{minerals:400,fuel:200},       desc:"Mass-produces survey probes for system mapping.",         multi:false},
-  warplab:     {id:"warplab",     layer:3,name:"Warp Drive Lab",    res:"fuel",      base:600, prod:{fuel:2,research:2},                  tier:1,cost:{research:400,energy:300},     desc:"Engineers faster-than-light propulsion theory.",          multi:true},
-  shipyard:    {id:"shipyard",    layer:3,name:"Shipyard",          res:"fuel",      base:800, prod:{fuel:3,minerals:1},                  tier:2,cost:{minerals:600,energy:400,fuel:300},desc:"Constructs deep space vessels frame by frame.",         multi:true},
-  deepspaceantenna:{id:"deepspaceantenna",layer:3,name:"Deep Space Antenna",res:"research",base:700,prod:{research:4},tier:2,cost:{research:500,minerals:400},desc:"Reaches across light-years for faint signals.",        multi:true},
-  colonyship:  {id:"colonyship",  layer:3,name:"Colony Ship",       res:"fuel",      base:5000,prod:{},                                   tier:4,cost:{energy:3000,minerals:3000,research:3000,fuel:2000,population:1000},desc:"WIN: Launch to a new world.",multi:true},
+  warplab:     {id:"warplab",     layer:3,name:"Warp Drive Lab",    res:"fuel",      base:600, prod:{fuel:2,research:2},                  tier:1,cost:{research:400,energy:300},     desc:"Engineers faster-than-light propulsion theory.",          multi:true, requires:{probefactory:1}},
+  shipyard:    {id:"shipyard",    layer:3,name:"Shipyard",          res:"fuel",      base:800, prod:{fuel:3,minerals:1},                  tier:2,cost:{minerals:600,energy:400,fuel:300},desc:"Constructs deep space vessels frame by frame.",         multi:true, requires:{warplab:1, deepspaceantenna:1}},
+  deepspaceantenna:{id:"deepspaceantenna",layer:3,name:"Deep Space Antenna",res:"research",base:700,prod:{research:4},tier:2,cost:{research:500,minerals:400},desc:"Reaches across light-years for faint signals.",        multi:true, requires:{probefactory:1}},
+  // Colony Ship phases — one-time projects, not buildings. Live on the Launch tab.
+  // Phases are gated linearly: phase 1 → phase 2 → ... → phase 5 → Launch button.
+  // All v0.8.3 gates (building prereqs, knowReq tier-3) carry into phase 1 as well as
+  // a new upgradeReq for "2 of u13, u14, u15."
+  cs_phase1: {id:"cs_phase1",  layer:3,name:"Hull Frame",       res:"minerals",  base:25000, prod:{},                                   tier:4,cost:{minerals:25000,energy:15000},                  desc:"The skeleton. Welded in vacuum.",                          multi:true, phase:true, phaseNum:1, requires:{shipyard:3, warplab:2, deepspaceantenna:2, probefactory:3}, knowReq:"tier3", upgradeReq:2},
+  cs_phase2: {id:"cs_phase2",  layer:3,name:"Engines",          res:"fuel",      base:25000, prod:{},                                   tier:4,cost:{fuel:25000,minerals:15000,research:5000},      desc:"Fusion reactors. Loud. Don't stand near them.",            multi:true, phase:true, phaseNum:2},
+  cs_phase3: {id:"cs_phase3",  layer:3,name:"Life Support",     res:"population",base:20000, prod:{},                                   tier:4,cost:{population:20000,research:15000,energy:10000}, desc:"Air, water, hydroponics, gravity rings.",                  multi:true, phase:true, phaseNum:3},
+  cs_phase4: {id:"cs_phase4",  layer:3,name:"Cargo & Cryo",     res:"population",base:20000, prod:{},                                   tier:4,cost:{population:20000,minerals:15000,fuel:10000},   desc:"Sleeping bays for 1,200 colonists plus Dave.",             multi:true, phase:true, phaseNum:4},
+  cs_phase5: {id:"cs_phase5",  layer:3,name:"Navigation Core",  res:"research",  base:30000, prod:{},                                   tier:4,cost:{research:30000,energy:10000,fuel:10000},       desc:"Charts the route. Dave's body. Probably.",                 multi:true, phase:true, phaseNum:5},
 };
 
 const UPGRADES = [
@@ -115,6 +466,11 @@ const UPGRADES = [
   {id:"u13",layer:3,name:"Warp Field Theory",  req:{research:800,fuel:500},                 cost:{research:800,fuel:500},                effect:"3x warp lab output",            tier:1},
   {id:"u14",layer:3,name:"Autonomous Probes",  req:{research:1000},                         cost:{research:1000,fuel:400},               effect:"3x probe factory output",       tier:1},
   {id:"u15",layer:3,name:"Starcore Drive",      req:{fuel:2000,energy:1000},                 cost:{fuel:2000,energy:1000,minerals:1000},  effect:"All fuel x2, colony ship -30%", tier:2},
+  // Click Mastery upgrades — require any tier-3 knowledge node
+  {id:"uc1",layer:3,name:"Click Mastery I",   req:{energy:5000,minerals:5000,research:5000,population:5000,fuel:5000},          cost:{energy:5000,minerals:5000,research:5000,population:5000,fuel:5000},          effect:"2x click power", tier:3, knowReq:"tier3"},
+  {id:"uc2",layer:3,name:"Click Mastery II",  req:{energy:50000,minerals:50000,research:50000,population:50000,fuel:50000},     cost:{energy:50000,minerals:50000,research:50000,population:50000,fuel:50000},     effect:"5x click power (10x stacked)", tier:3, knowReq:"tier3"},
+  {id:"uc3",layer:3,name:"Click Mastery III", req:{energy:500000,minerals:500000,research:500000,population:500000,fuel:500000},cost:{energy:500000,minerals:500000,research:500000,population:500000,fuel:500000},effect:"10x click power (100x stacked)", tier:3, knowReq:"tier3"},
+  {id:"uc4",layer:3,name:"Click Mastery IV",  req:{energy:5000000,minerals:5000000,research:5000000,population:5000000,fuel:5000000},cost:{energy:5000000,minerals:5000000,research:5000000,population:5000000,fuel:5000000},effect:"20x click power (2000x stacked)", tier:3, knowReq:"tier3"},
 ];
 
 const KNOWLEDGE = [
@@ -166,7 +522,7 @@ const STORY_EVENTS = [
   {id:"s12", trigger:(b,k,l)=>l>=3,                                             title:"Into the Deep",         icon:"🌌",text:"Deep space probes deployed. One system is broadcasting a weather report for a planet we have not named yet."},
   {id:"s13", trigger:(b,k,l)=>l>=3&&(b.warplab||0)>=1,                          title:"Warp Signature",        icon:"〰️",text:"First microscale spacetime fold. Duration: 0.003 seconds. The chamber emerged 4 centimeters from its start. Dave felt it."},
   {id:"s14", trigger:(b,k,l)=>l>=3&&(b.shipyard||0)>=3,                         title:"The Shape of Tomorrow", icon:"🚀",text:"Commander Yuen said quietly: I think we are actually going to do this. Nobody disagreed. Not even Margaret."},
-  {id:"s15", trigger:(b,k,l)=>(b.colonyship||0)>=1,                             title:"Launch Day",            icon:"🌠",text:"The colony ship sits at dock. Crew of 1,200 in cryo-sleep. Dave is the navigation AI. Dave is extremely excited."},
+  {id:"s15", trigger:(b,k,l)=>(b.cs_phase5||0)>=1,                             title:"Launch Day",            icon:"🌠",text:"The colony ship sits at dock. Crew of 1,200 in cryo-sleep. Dave is the navigation AI. Dave is extremely excited."},
 ];
 
 const AMBIENT_EVENTS = [
@@ -203,7 +559,7 @@ const MILESTONES_DEF = [
   {id:"m5",name:"Station Commander", check:(b,l,k)=>(b.commandmodule||0)>=1,                    badge:"🔩",color:"#4a4a8a"},
   {id:"m6",name:"Deep Space Pioneer",check:(b,l,k)=>l>=3,                                       badge:"🌌",color:"#1a2a6a"},
   {id:"m7",name:"Singularity",       check:(b,l,k)=>k.includes("cx_rp2"),                       badge:"🤖",color:"#6a2a2a"},
-  {id:"m8",name:"Colony Ship Ready", check:(b,l,k)=>(b.colonyship||0)>=1,                       badge:"🚀",color:"#6a1a1a"},
+  {id:"m8",name:"Colony Ship Ready", check:(b,l,k)=>(b.cs_phase5||0)>=1,                       badge:"🚀",color:"#6a1a1a"},
 ];
 
 const ACHIEVEMENTS = [
@@ -230,10 +586,100 @@ const ACHIEVEMENTS = [
   {id:"a21",name:"Singularity Now",     desc:"Unlock the Singularity Engine",    check:(r,b,u,p,cl,k)=>k.includes("cx_rp2")},
   {id:"a22",name:"Warp Speed",          desc:"Unlock Warp Bubble Theory",        check:(r,b,u,p,cl,k)=>k.includes("kf3")},
   {id:"a23",name:"We Are All Dave",     desc:"Unlock Hive Mind Protocol",        check:(r,b,u,p,cl,k)=>k.includes("kp3")},
+  {id:"a24",name:"Running Naked",       desc:"Launch a Colony Ship with no Rank equipped, after a launch with a Rank.", check:()=>false}, // triggered manually via XPStore.runningNakedDone
 ];
 
-const MILESTONE_ACH = {a8:"m4",a9:"m6",a10:"m8",a16:"m3"};
+const MILESTONE_ACH = {a8:"m4",a9:"m6",a10:"m8",a16:"m3",a24:"m9"};
 const PLANETS = ["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc","HD 40307g","55 Cancri f","Wolf 1061c","Ross 128b","Teegarden b","LHS 1140b"];
+const TIER3_KNOW = ["ke3","km3","kr3","kp3","kf3"];
+
+const PATCH_NOTES = [
+  {version:"v0.9", date:"Latest", changes:[
+    "★ Phased Colony Ship construction — the single 'buy a ship' button is replaced by a five-phase build sequence",
+    "Phase 1: Hull Frame (25K minerals, 15K energy)",
+    "Phase 2: Engines (25K fuel, 15K minerals, 5K research)",
+    "Phase 3: Life Support (20K population, 15K research, 10K energy)",
+    "Phase 4: Cargo & Cryo (20K population, 15K minerals, 10K fuel)",
+    "Phase 5: Navigation Core (30K research, 10K energy, 10K fuel)",
+    "Phases must be built in order, are one-time only, and don't produce anything — they're construction milestones",
+    "★ Phase 1 entry gates: any tier-3 knowledge node, 2 of 3 Layer-3 upgrades (Warp Field / Autonomous Probes / Starcore Drive), and the existing building prereqs (3× Shipyard, 2× Warp Lab, 2× Deep Space Antenna, 3× Probe Factory)",
+    "★ Launch readiness: after all 5 phases are built, the actual launch requires you to currently hold 10M of every resource",
+    "All phase construction lives on the Launch tab as a checklist with progress indicators",
+    "Layer Skipper rank now also halves all 5 phase costs — still a meaningful endgame discount",
+  ]},
+  {version:"v0.8.3", date:"", changes:[
+    "★ Colony Ship pacing overhaul — first runs no longer skip the endgame.",
+    "Cost: 50,000 of every resource (was 3,000 each, with smaller fuel/population).",
+    "Building prereq: 3 Shipyards, 2 Warp Drive Labs, 2 Deep Space Antennas, 3 Probe Factories.",
+    "Knowledge prereq: any tier-3 knowledge node (Dyson Fragment, Asteroid Siphon, Unified Field Theory, Hive Mind Protocol, or Warp Bubble Theory).",
+    "The Colony Ship card clearly displays all gates so you can see exactly what you're missing.",
+  ]},
+  {version:"v0.8.2", date:"", changes:[
+    "★ New Ranks tab in the main tab bar — same content as the header ★ button, now with a badge counter when new ranks are affordable.",
+    "Bug fix — building costs now properly scale up during a hold-burst on Buy. Each successive copy in a burst pays the correct (higher) price.",
+  ]},
+  {version:"v0.8.1", date:"", changes:[
+    "Bug fix — holding the Buy button could drop resources below zero on fast hold-bursts. The affordability check now happens atomically inside the state update so each individual buy in a burst is properly gated.",
+    "Bug fix — sell refund during a hold-burst now uses fresh building counts so refunds match the actual copy being sold.",
+  ]},
+  {version:"v0.8", date:"", changes:[
+    "★ Click Mastery upgrades — four new upgrades that multiply click power 2×, 5×, 10×, 20× (stacked: up to 2000×). Unlocked after owning any tier-3 knowledge node.",
+    "★ Save / Load — new 💾 button in the header. Export your full save as base64, copy to clipboard, or download as a .txt file. Import to restore.",
+    "Notes moved into the new ℹ Support modal alongside the email link — both meta-tabs removed from the main tab bar. Five tabs instead of seven.",
+    "Header now sports four utility buttons: 🔊 audio, 💾 save, ℹ support+notes, and Pause.",
+  ]},
+  {version:"v0.7", date:"", changes:[
+    "★ 16 new Ranks across Rare, Legendary, and Mythic tiers",
+    "Rare tier: Pioneer (start with 5 of every L1 building), Industrialist (1.13× cost scaling), Atomic Scholar (+30% research, 2× knowledge XP), Lucky Breaker (5% crit clicks for 10×), Layer Skipper (Terraformer/Station Dock half cost), The Hoarder (+1% per 100 minerals held), Static Cling (clicks splash 25% to other resources)",
+    "Legendary tier: Architect (+75% prod, +50% click), Hivemind (population produces all resources at 25%), Time Lord (1.5× game speed), Dyson Heir (energy buildings ×3), Heavyweight (+200% prod, click power = 0), Glass Cannon (+150% prod, halves random building every 5 min)",
+    "Mythic tier: Stellar Council (2×/2×/2× XP), The Architect Prime (start at Layer 2 fully built), The Lonely Astronaut (+500% prod but population locked at 0 — trophy build, cannot win)",
+    "★ 3 Secret Ranks unlock by playing: Dave (5 launches), The Naked Engineer (complete Running Naked), Echo of the First Colony (visit all 10 planets)",
+    "Achievement #24: Running Naked — launch a Colony Ship with no Rank equipped, after a launch with one (milestone)",
+  ]},
+  {version:"v0.6", date:"", changes:[
+    "★ XP system — earn XP from clicks, builds, upgrades, knowledge, achievements, layer transitions, milestones, story events, time played, daily streaks, and especially Colony Ship launches",
+    "First-time bonuses — extra XP for the first of any building, upgrade, layer reached, story event, or planet visited",
+    "Personal best bonus — +100 XP for any Colony Ship launch faster than your previous best",
+    "XP gain decays slightly each prestige (8% per launch, floor 30%)",
+    "Daily streak — log in on consecutive days for stacking daily XP rewards",
+    "Floating XP popups in the top-right corner show every gain in real time",
+    "★ XP Store — spend XP on Ranks: persistent perks you own forever and can equip/swap freely",
+    "20 Ranks across Common and Uncommon tiers, including chaotic gems like Dave's Cousin, The Intern, and Beans McGraw, Esq.",
+    "Only one Rank can be equipped at a time — pick the right tool for each run",
+    "Ranks persist across Colony Ship launches and apply their effects on every run",
+  ]},
+  {version:"v0.5.1", date:"", changes:[
+    "Bug fix — mobile taps on Buy / Sell were triggering hold-repeat after a single tap; touch and mouse events were both firing. Now suppressed.",
+    "Bug fix — same issue on resource click buttons could leak repeating timers in rare cases; added safety clear and touch suppression.",
+    "Tuned hold-detection threshold to 350ms (was 280ms) to make taps feel more reliable on mobile.",
+  ]},
+  {version:"v0.5", date:"", changes:[
+    "Hold to Buy / Sell — press and hold any building's Buy or Sell button to repeat the action",
+    "Particle burst on click — colored particles radiate outward from resource buttons",
+    "Unified Upgrades tab — all upgrades in one sorted grid, prioritized by what you can buy now",
+    "Building Prerequisites — some buildings now require specific other buildings to be built first; tier-2 and tier-3 structures show their lock requirements clearly",
+    "Removed the X close button from the story ticker banner — it stays visible always",
+  ]},
+  {version:"v0.4", date:"", changes:[
+    "Audio engine — procedural SFX for clicks, purchases, achievements, knowledge unlocks, and prestige launch",
+    "Ambient music — slow evolving synth pad, generated entirely in-browser",
+    "Audio settings — master, music, and SFX volume sliders in the header (gear icon)",
+    "Click button animations — pulse + ring expand on every click and hold",
+    "Layer transition cinematic — full-screen reveal when you unlock Orbital or Deep Space",
+    "Patch Notes tab — you are looking at it",
+  ]},
+  {version:"v0.3", date:"", changes:[
+    "Tab Badging — live badges on Upgrade, Knowledge, and Achievements tabs",
+    "Hold to Generate — hold any click button to continuously produce resources",
+    "Combined Resource Buildings — multi-resource buildings grouped in their own section",
+  ]},
+  {version:"v0.2", date:"", changes:[
+    "Log button now opens a modal overlay showing full comms and story history",
+    "Tab labels corrected to full names (Knowledge, Achievements)",
+    "Support email updated to spacebaserace@gmail.com",
+  ]},
+  {version:"v0.1", date:"", changes:["Initial release."]},
+];
 const LAYER_THEME = {
   1:{name:"Surface Colony",    color:"#7c9e6f",bg:"linear-gradient(180deg,#0a1a08 0%,#080d0a 100%)",border:"#2a4a2a",icon:"🌍"},
   2:{name:"Orbital Station",   color:"#6f9ec9",bg:"linear-gradient(180deg,#080f1a 0%,#050a12 100%)",border:"#1a3a5a",icon:"🛸"},
@@ -252,27 +698,90 @@ function Badge({count, color="#eb5757"}) {
   return <span style={{position:"absolute",top:-5,right:-5,background:color,color:"#fff",borderRadius:8,fontSize:8,padding:"0 3px",lineHeight:"14px",minWidth:14,textAlign:"center"}}>{count>9?"9+":count}</span>;
 }
 
-function BuildingCard({b, buildings, res, prod, canAfford, buildingCost, buyBuilding, sellBuilding}) {
+// HoldButton — click for one action, hold for repeating (every 120ms after a 280ms initial delay).
+// Suppresses synthetic mouse events triggered by touch on mobile to prevent double-fire.
+function HoldButton({onAction, disabled, style, children}) {
+  const ref = React.useRef({startTimer:null, repeatTimer:null, touchUntil:0});
+  const start = () => {
+    if (disabled) return;
+    onAction(); // fire immediately on press
+    ref.current.startTimer = setTimeout(()=>{
+      ref.current.repeatTimer = setInterval(onAction, 120);
+    }, 350);
+  };
+  const stop = () => {
+    if (ref.current.startTimer)  { clearTimeout(ref.current.startTimer);   ref.current.startTimer = null; }
+    if (ref.current.repeatTimer) { clearInterval(ref.current.repeatTimer); ref.current.repeatTimer = null; }
+  };
+  const onMouseDown = () => {
+    // Mobile browsers emit synthetic mousedown ~300ms after a tap. Skip it.
+    if (Date.now() < ref.current.touchUntil) return;
+    start();
+  };
+  const onMouseUp = () => {
+    if (Date.now() < ref.current.touchUntil) return;
+    stop();
+  };
+  const onTouchStart = e => {
+    e.preventDefault();
+    ref.current.touchUntil = Date.now() + 600;
+    start();
+  };
+  const onTouchEnd = e => {
+    e.preventDefault();
+    ref.current.touchUntil = Date.now() + 600;
+    stop();
+  };
+  React.useEffect(()=>stop, []); // cleanup on unmount
+  return (
+    <button
+      onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={stop}
+      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}
+      disabled={disabled}
+      style={style}>
+      {children}
+    </button>
+  );
+}
+
+function BuildingCard({b, buildings, res, prod, canAfford, buildingCost, buyBuilding, sellBuilding, knowledge}) {
   const cost   = buildingCost(b);
   const afford = canAfford(cost);
   const owned  = buildings[b.id] || 0;
-  const wait   = !afford ? timeToAfford(res, prod, cost) : null;
+  const buildOk = !b.requires || Object.entries(b.requires).every(([id,n])=>(buildings[id]||0)>=n);
+  const knowOk  = !b.knowReq || (b.knowReq==="tier3" && ["ke3","km3","kr3","kp3","kf3"].some(id=>(knowledge||[]).includes(id)));
+  const reqsOk = buildOk && knowOk;
+  const wait   = !afford && reqsOk ? timeToAfford(res, prod, cost) : null;
   const layerIcon = b.layer===3?"🌌 ":b.layer===2?"🛸 ":"";
+  const canBuy = afford && reqsOk;
   return (
-    <div style={{background:"#080d1a",border:"1px solid "+(afford?"#1e4a7f":"#0d1a2e"),borderRadius:6,padding:"6px 7px",opacity:afford||owned?1:0.5,display:"flex",flexDirection:"column",gap:3}}>
+    <div style={{background:"#080d1a",border:"1px solid "+(canBuy?"#1e4a7f":"#0d1a2e"),borderRadius:6,padding:"6px 7px",opacity:canBuy||owned?1:0.5,display:"flex",flexDirection:"column",gap:3}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
         <span style={{fontSize:11,fontWeight:700,color:"#c8d8f0",lineHeight:1.3,flex:1}}>{layerIcon}{b.name}</span>
         <span style={{fontSize:11,color:"#a0c4ff",fontWeight:700,marginLeft:4}}>x{owned}</span>
       </div>
       <div style={{fontSize:9,color:"#4a6a8a"}}>{b.desc.slice(0,55)+(b.desc.length>55?"...":"")}</div>
       <div style={{fontSize:9,color:"#4a7a9a"}}>{Object.entries(b.prod).map(([k,v])=>"+"+( v*Math.max(owned,1)).toFixed(1)+RES[k].icon+"/s").join(" ")}</div>
+      {b.requires && !buildOk && (
+        <div style={{fontSize:9,color:"#8a6a2a",lineHeight:1.4}}>
+          🔒 {Object.entries(b.requires).map(([id,n])=>{
+            const have=buildings[id]||0, name=BUILDINGS[id]?.name||id;
+            return (have>=n?"✓":"")+" "+n+"× "+name+(have<n?" ("+have+"/"+n+")":"");
+          }).join(" • ")}
+        </div>
+      )}
+      {b.knowReq==="tier3" && !knowOk && (
+        <div style={{fontSize:9,color:"#8a6a2a",lineHeight:1.4}}>
+          🧠 Requires any tier-3 knowledge node
+        </div>
+      )}
       <div style={{display:"flex",flexWrap:"wrap",gap:2}}>
         {Object.entries(cost).map(([k,v]) => <Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}
       </div>
       {wait!==null && isFinite(wait) && <div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
       <div style={{display:"flex",gap:3,marginTop:1}}>
-        <button onClick={()=>buyBuilding(b)} style={{flex:1,padding:"4px 0",borderRadius:4,border:"1px solid "+(afford?"#1e4a8f":"#0d1a2e"),background:afford?"#0d2a4a":"#080d1a",color:afford?"#4a9eff":"#1a3a5a",cursor:afford?"pointer":"not-allowed",fontSize:11,fontWeight:700}}>Buy</button>
-        <button onClick={()=>sellBuilding(b)} style={{flex:1,padding:"4px 0",borderRadius:4,border:"1px solid "+(owned?"#5a1515":"#0d1a2e"),background:owned?"#2a0d0d":"#080d1a",color:owned?"#eb5757":"#1a3a5a",cursor:owned?"pointer":"not-allowed",fontSize:11,fontWeight:700}}>Sell</button>
+        <HoldButton onAction={()=>buyBuilding(b)} disabled={!canBuy} style={{flex:1,padding:"4px 0",borderRadius:4,border:"1px solid "+(canBuy?"#1e4a8f":"#0d1a2e"),background:canBuy?"#0d2a4a":"#080d1a",color:canBuy?"#4a9eff":"#1a3a5a",cursor:canBuy?"pointer":"not-allowed",fontSize:11,fontWeight:700}}>Buy</HoldButton>
+        <HoldButton onAction={()=>sellBuilding(b)} disabled={!owned} style={{flex:1,padding:"4px 0",borderRadius:4,border:"1px solid "+(owned?"#5a1515":"#0d1a2e"),background:owned?"#2a0d0d":"#080d1a",color:owned?"#eb5757":"#1a3a5a",cursor:owned?"pointer":"not-allowed",fontSize:11,fontWeight:700}}>Sell</HoldButton>
       </div>
     </div>
   );
@@ -431,14 +940,116 @@ function KnowledgeTree({knowledge, res, prod, buyKnowledge, layer}) {
   );
 }
 
+// ── RanksContent ───────────────────────────────────────────────────────────
+// Reusable rank list — used in both the header modal and the Ranks tab
+function RanksContent({xpData, setXpData, activeRank, prestige}) {
+  const unlockCtx = {
+    totalLaunches: xpData.totalLaunches || 0,
+    runningNakedDone: !!xpData.runningNakedDone,
+    uniquePlanets: Object.keys(xpData.firstTime?.planets || {}).length,
+  };
+  const visibleCount = RANKS.filter(r=>!r.secret || xpData.ownedRanks.includes(r.id) || (r.unlockCheck && r.unlockCheck(unlockCtx))).length;
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:0,minHeight:0,flex:1}}>
+      <div style={{paddingBottom:8,borderBottom:"1px solid #1e3a5f",marginBottom:10}}>
+        <div style={{fontSize:11,color:"#5a7a9a"}}>{"Lifetime: "+FMT(xpData.totalEarned)+"  •  Available: "+FMT(xpData.xp)+"  •  Owned: "+xpData.ownedRanks.length+"/"+visibleCount}</div>
+      </div>
+
+      {/* Active rank + Unequip button */}
+      <div style={{background:"#080d1a",border:"1px solid "+(activeRank?RANK_TIERS[activeRank.tier].color:"#1e3a5f"),borderRadius:8,padding:"8px 10px",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:22}}>{activeRank?activeRank.icon:"○"}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:700,color:activeRank?RANK_TIERS[activeRank.tier].color:"#5a7a9a"}}>{activeRank?activeRank.name:"No Rank"}</div>
+          <div style={{fontSize:10,color:"#8a9aaa",lineHeight:1.4}}>{activeRank?activeRank.desc:"You're running naked. Earn XP, then equip a Rank for an edge."}</div>
+        </div>
+        {activeRank&&(
+          <button onClick={()=>{XPStore.equipRank(null); setXpData(XPStore.get());}} style={{padding:"5px 10px",background:"#2a0d0d",border:"1px solid #5a1515",borderRadius:5,color:"#eb5757",fontSize:10,cursor:"pointer",fontWeight:700,whiteSpace:"nowrap"}}>Unequip</button>
+        )}
+      </div>
+
+      {/* Rank list grouped by tier */}
+      <div style={{overflowY:"auto",flex:1,paddingRight:2,minHeight:0}}>
+        {Object.entries(RANK_TIERS).map(([tierKey, tierInfo])=>{
+          const tierRanks = RANKS.filter(r => r.tier === tierKey).filter(r=>{
+            if (!r.secret) return true;
+            if (xpData.ownedRanks.includes(r.id)) return true;
+            return r.unlockCheck ? r.unlockCheck(unlockCtx) : false;
+          });
+          if (tierRanks.length === 0) return null;
+          return (
+            <div key={tierKey} style={{marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:tierInfo.color,marginBottom:5,letterSpacing:1,textTransform:"uppercase"}}>{tierInfo.label}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr",gap:5}}>
+                {tierRanks.map(rank=>{
+                  const owned    = xpData.ownedRanks.includes(rank.id);
+                  const equipped = xpData.equippedRank === rank.id;
+                  const canBuy   = !owned && xpData.xp >= rank.cost;
+                  return (
+                    <div key={rank.id} style={{background:equipped?"#0d2a4a":"#080d1a",border:"1px solid "+(equipped?tierInfo.color:owned?tierInfo.border:canBuy?tierInfo.color+"99":"#0d1a2e"),borderRadius:6,padding:"6px 8px",opacity:owned||canBuy?1:0.55,display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:20,flexShrink:0}}>{rank.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:700,color:owned?tierInfo.color:"#c8d8f0",display:"flex",alignItems:"center",gap:6}}>
+                          {rank.secret&&<span style={{fontSize:9,color:"#e6a817"}} title="Secret">★</span>}
+                          {rank.name}
+                          {equipped&&<span style={{fontSize:9,padding:"1px 5px",background:tierInfo.color+"33",border:"1px solid "+tierInfo.color,borderRadius:3,color:tierInfo.color}}>EQUIPPED</span>}
+                        </div>
+                        <div style={{fontSize:10,color:"#8a9aaa",lineHeight:1.4}}>{rank.desc}</div>
+                      </div>
+                      <div style={{flexShrink:0}}>
+                        {owned ? (
+                          equipped
+                            ? <span style={{fontSize:10,color:"#5a7a9a",padding:"6px 10px"}}>active</span>
+                            : <button onClick={()=>{XPStore.equipRank(rank.id); setXpData(XPStore.get()); AudioEngine.play('buy');}} style={{padding:"6px 10px",background:"#0d2a4a",border:"1px solid "+tierInfo.color,borderRadius:5,color:tierInfo.color,fontSize:10,cursor:"pointer",fontWeight:700}}>Equip</button>
+                        ) : (
+                          <button disabled={!canBuy} onClick={()=>{
+                            if (!XPStore.spend(rank.cost)) return;
+                            XPStore.ownRank(rank.id);
+                            XPStore.equipRank(rank.id);
+                            setXpData(XPStore.get());
+                            AudioEngine.play('achieve');
+                          }} style={{padding:"6px 10px",background:canBuy?"#0d2a0d":"#0d1a2e",border:"1px solid "+(canBuy?"#2a5a3a":"#1e3a5f"),borderRadius:5,color:canBuy?"#6fcf97":"#3a5a7a",fontSize:10,cursor:canBuy?"pointer":"not-allowed",fontWeight:700,whiteSpace:"nowrap"}}>{"★ "+FMT(rank.cost)}</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        {prestige >= 1 && (
+          <div style={{fontSize:10,color:"#5a7a9a",textAlign:"center",marginTop:8,fontStyle:"italic"}}>
+            XP gain decay: {Math.round(Math.max(0.30, Math.pow(0.92, prestige))*100)}% (decreases with each launch)
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── App ────────────────────────────────────────────────────────────────────
 function App() {
-  const [res,           setRes]           = useState(initRes());
+  const [res,           setRes]           = useState(()=>{
+    const eq = XPStore.get().equippedRank;
+    const eqRank = eq ? RANKS_BY_ID[eq] : null;
+    if (eqRank?.effect?.startResources) return {...initRes(), ...eqRank.effect.startResources};
+    return initRes();
+  });
   const [totalRes,      setTotalRes]      = useState(initRes());
-  const [buildings,     setBuildings]     = useState(initBuildings());
+  const [buildings,     setBuildings]     = useState(()=>{
+    const eq = XPStore.get().equippedRank;
+    const eqRank = eq ? RANKS_BY_ID[eq] : null;
+    if (eqRank?.effect?.special === "pioneer") return {solar:5, drill:5, lab:5, habitat:5};
+    if (eqRank?.effect?.special === "architect_prime") return {solar:1, drill:1, lab:1, habitat:1, refinery:1, medbay:1, greenhouse:1, terraformer:1};
+    return initBuildings();
+  });
   const [upgrades,      setUpgrades]      = useState([]);
   const [knowledge,     setKnowledge]     = useState([]);
-  const [layer,         setLayer]         = useState(1);
+  const [layer,         setLayer]         = useState(()=>{
+    const eq = XPStore.get().equippedRank;
+    const eqRank = eq ? RANKS_BY_ID[eq] : null;
+    return eqRank?.effect?.special === "architect_prime" ? 2 : 1;
+  });
   const [prestige,      setPrestige]      = useState(0);
   const [prestigeBonus, setPrestigeBonus] = useState(1);
   const [legacyPoints,  setLegacyPoints]  = useState(0);
@@ -460,17 +1071,84 @@ function App() {
   const [ticker,        setTicker]        = useState(null);
   const [launchModal,   setLaunchModal]   = useState(false);
   const [logModal,      setLogModal]      = useState(false);
+  const [audioModal,    setAudioModal]    = useState(false);
+  const [saveModal,     setSaveModal]     = useState(false);
+  const [supportModal,  setSupportModal]  = useState(false);
+  const [importText,    setImportText]    = useState("");
+  const [saveStatus,    setSaveStatus]    = useState("");
+  const [audioSettings, setAudioSettings] = useState(()=>AudioEngine.getSettings());
+  const [clickRings,    setClickRings]    = useState({});
+  const [layerTransition, setLayerTransition] = useState(null);
+
+  // XP state
+  const [xpData,        setXpData]        = useState(()=>XPStore.get());
+  const [xpStoreOpen,   setXpStoreOpen]   = useState(false);
+  const [xpPopups,      setXpPopups]      = useState([]); // floating "+N XP" notifications
+  const [tabsVisitedThisSession, setTabsVisitedThisSession] = useState({});
+  const [milestonesHitThisRun,   setMilestonesHitThisRun]   = useState({}); // `${res}_${tier}` -> true
+  const [branchesCompletedThisRun, setBranchesCompletedThisRun] = useState({}); // branchName -> true
+  const xpClickCounter = useRef(0); // for The Intern's 25th-click skip
+  const popupIdRef     = useRef(0);
+  const ringIdRef = useRef(0);
+  const prevLayerRef = useRef(layer);
   const holdRef   = useRef(null);
   const nextTickRef = useRef(0);
+  // buildingsRef mirrors `buildings` synchronously so hold-burst handlers can read fresh counts
+  // without waiting for re-render. Updated in a useEffect below.
+  const buildingsRef = useRef(buildings);
+  // Dave's Cousin: id of currently broken building (or null)
+  const [davesPause,    setDavesPause]    = useState(null); // {id, until}
+
+  // Keep buildingsRef in sync with buildings state
+  useEffect(() => { buildingsRef.current = buildings; }, [buildings]);
+
+  // Helper to award XP and spawn a floating popup
+  const awardXP = useCallback((amount, reason) => {
+    if (!amount || amount <= 0) return;
+    // Rank XP multipliers
+    const eq = XPStore.get().equippedRank;
+    const eqRank = eq ? RANKS_BY_ID[eq] : null;
+    let multiplier = 1;
+    if (eqRank?.effect?.special === "stellar_council") multiplier *= 2;
+    if (eqRank?.effect?.special === "atomic_scholar" && reason === "Knowledge unlocked") multiplier *= 2;
+    // XP gain decay: -8% per prestige, floor 0.3
+    const decay = Math.max(0.30, Math.pow(0.92, prestige));
+    const final = Math.max(1, Math.round(amount * multiplier * decay));
+    XPStore.award(final, reason);
+    setXpData(XPStore.get());
+    const id = ++popupIdRef.current;
+    setXpPopups(p => [...p, {id, amount: final, reason}]);
+    setTimeout(() => setXpPopups(p => p.filter(x=>x.id!==id)), 1800);
+  }, [prestige]);
+
+  // Daily streak check on first mount
+  useEffect(() => {
+    const r = XPStore.checkDaily();
+    if (r.awarded > 0) {
+      // delay so the user sees it after the UI settles
+      setTimeout(() => awardXP(r.awarded, "Daily streak: day "+r.streak), 1200);
+      setXpData(XPStore.get());
+    }
+  // eslint-disable-next-line
+  }, []);
+
+  // Active rank lookup
+  const activeRank = xpData.equippedRank ? RANKS_BY_ID[xpData.equippedRank] : null;
+  const rankEffect = activeRank?.effect || {};
 
   useEffect(() => {
     const saved = localStorage.getItem("sbr_save");
     if (saved) {
       const diff = Math.floor((Date.now()-parseInt(saved))/1000);
       if (diff>30) {
-        const capped = Math.min(diff,28800);
+        // Investor rank bumps offline cap to 16h
+        const xpState = XPStore.get();
+        const eqRank  = xpState.equippedRank ? RANKS_BY_ID[xpState.equippedRank] : null;
+        const isInvestor = eqRank && eqRank.effect.special === "investor";
+        const capSecs = isInvestor ? 57600 : 28800;
+        const capped = Math.min(diff, capSecs);
         const dream  = DREAM_EVENTS[Math.floor(Math.random()*DREAM_EVENTS.length)];
-        setOfflineModal({secs:capped,dream,actual:diff});
+        setOfflineModal({secs:capped, dream, actual:diff, investor:!!isInvestor});
       }
     }
     const sv = setInterval(()=>localStorage.setItem("sbr_save",Date.now().toString()),5000);
@@ -479,8 +1157,38 @@ function App() {
   },[]);
 
   useEffect(()=>{if(won||paused)return;const t=setInterval(()=>setElapsed(e=>e+1),1000);return()=>clearInterval(t);},[won,paused]);
-  useEffect(()=>{if(!won&&(buildings.colonyship||0)>=1)setWon(true);},[buildings.colonyship,won]);
+  // Phases must be built in order; each is one-time. Once all 5 are built AND resource
+  // milestone is met, the player can press the Launch button on the Launch tab.
+  const PHASE_IDS = ["cs_phase1","cs_phase2","cs_phase3","cs_phase4","cs_phase5"];
+  const phasesBuilt = PHASE_IDS.filter(id => (buildings[id]||0) >= 1).length;
+  const allPhasesDone = phasesBuilt === 5;
+  // Launch milestone: 10M of every resource currently on hand
+  const LAUNCH_THRESHOLD = 10000000;
+  const launchResReady = ["energy","minerals","research","fuel","population"].every(k => (res[k]||0) >= LAUNCH_THRESHOLD);
+  const canLaunch = allPhasesDone && launchResReady;
   useEffect(()=>{if(layer===1&&(buildings.terraformer||0)>=1)setLayer(2);if(layer===2&&(buildings.stationdock||0)>=1)setLayer(3);},[buildings,layer]);
+
+  // Layer transition cinematic
+  useEffect(()=>{
+    if (layer !== prevLayerRef.current && layer > prevLayerRef.current) {
+      const lt = LAYER_THEME[layer];
+      AudioEngine.play("layerUp");
+      setLayerTransition({icon:lt.icon, name:lt.name, color:lt.color});
+      setTimeout(()=>setLayerTransition(null), 3200);
+      // XP: 25 every transition, +100 first time L2, +200 first time L3
+      awardXP(25, "Reached "+lt.name);
+      if (XPStore.markFirst("layers", String(layer))) {
+        awardXP(layer === 3 ? 200 : 100, "First time at "+lt.name+"!");
+      }
+    }
+    prevLayerRef.current = layer;
+  },[layer,awardXP]);
+
+  // Start ambient music after first interaction
+  const ensureMusicStarted = useCallback(() => {
+    AudioEngine.resume();
+    if (!audioSettings.muted && audioSettings.music > 0) AudioEngine.startMusic();
+  }, [audioSettings]);
 
   const fmtTime = s => {
     const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
@@ -501,13 +1209,27 @@ function App() {
     if(knowledge.includes("cx_em")&&(type==="energy"||type==="minerals"))b*=2;
     if(knowledge.includes("cx_rp")&&(type==="research"||type==="population"))b*=2;
     if(knowledge.includes("cx_pf2"))b*=4;
+    // Click Mastery upgrades
+    if(upgrades.includes("uc1"))b*=2;
+    if(upgrades.includes("uc2"))b*=5;
+    if(upgrades.includes("uc3"))b*=10;
+    if(upgrades.includes("uc4"))b*=20;
+    // Rank effects
+    if (rankEffect.clickMult) b *= rankEffect.clickMult;
+    if (rankEffect.special === "coffee") {
+      if (elapsed < 60) b *= 2; // +100% click for first 60s
+      // After: no bonus, so b unaffected
+    }
+    if (rankEffect.special === "heavyweight") return 0; // no clicks at all
     return Math.floor(b*prestigeBonus);
-  },[upgrades,knowledge,prestigeBonus]);
+  },[upgrades,knowledge,prestigeBonus,rankEffect,elapsed]);
 
   const getProd = useCallback(()=>{
     const p=initRes();
     Object.values(BUILDINGS).forEach(bld=>{
       const cnt=buildings[bld.id]||0; if(!cnt) return;
+      // Dave's Cousin: skip the paused building briefly
+      if (davesPause && davesPause.id === bld.id) return;
       let m=prestigeBonus;
       if(upgrades.includes("u1")&&bld.id==="solar")m*=2; if(upgrades.includes("u2")&&bld.id==="drill")m*=2;
       if(upgrades.includes("u3")&&bld.id==="lab")m*=2; if(upgrades.includes("u4")&&bld.id==="habitat")m*=2;
@@ -541,11 +1263,43 @@ function App() {
       if(knowledge.includes("cx_rp2"))m*=3;
       if(knowledge.includes("cx_pf2")&&(bld.prod.fuel||bld.prod.population))m*=3;
       if(knowledge.includes("cx_fe2")&&(bld.prod.fuel||bld.prod.energy))m*=4;
+      // Dyson Heir: energy buildings produce 3x more
+      if (rankEffect.special === "dyson_heir" && bld.prod.energy) m *= 3;
       Object.entries(bld.prod).forEach(([k,v])=>{p[k]+=v*cnt*m;});
     });
     if(knowledge.includes("cx_pf")){const fp=p.population||0;p.fuel+=fp*0.2;p.energy+=fp*0.1;}
+    // Rank effects on production
+    if (rankEffect.prodMult) {
+      Object.entries(rankEffect.prodMult).forEach(([k,mult])=>{
+        if (k==="all") Object.keys(p).forEach(rk=>{p[rk]*=mult;});
+        else if (p[k] !== undefined) p[k] *= mult;
+      });
+    }
+    if (rankEffect.special === "optimist") {
+      const factor = elapsed < 600 ? 1.30 : 1.05;
+      Object.keys(p).forEach(k=>{p[k]*=factor;});
+    }
+    // Hivemind — population also produces every other resource at 25% rate
+    if (rankEffect.special === "hivemind") {
+      const popRate = p.population || 0;
+      ["energy","minerals","research","fuel"].forEach(k=>{p[k] += popRate*0.25;});
+    }
+    // The Lonely Astronaut — population locked at 0
+    if (rankEffect.special === "lonely_astronaut") p.population = 0;
+    // The Hoarder — +1% per 100 minerals held, capped at +50%
+    if (rankEffect.special === "hoarder") {
+      const bonus = Math.min(0.50, Math.floor((res.minerals||0)/100) * 0.01);
+      Object.keys(p).forEach(k=>{p[k] *= (1+bonus);});
+    }
+    // Echo of the First Colony — +10% per unique planet visited (max +100%)
+    if (rankEffect.special === "echo") {
+      const xpState = XPStore.get();
+      const planetsCount = Object.keys(xpState.firstTime.planets || {}).length;
+      const echoBonus = Math.min(1.0, planetsCount * 0.10);
+      Object.keys(p).forEach(k=>{p[k] *= (1+echoBonus);});
+    }
     return p;
-  },[buildings,upgrades,knowledge,prestigeBonus]);
+  },[buildings,upgrades,knowledge,prestigeBonus,rankEffect,elapsed,davesPause,res.minerals]);
 
   useEffect(()=>{
     if(paused) return;
@@ -578,6 +1332,8 @@ function App() {
         ev=pending[0];
         setStoryLog(prev=>[{...ev,time:elapsed},...prev]);
         setCommsLog(prev=>[{...ev,time:elapsed,kind:"story"},...prev]);
+        // First time ever seeing this story event → XP
+        if (XPStore.markFirst("storyEvents", ev.id)) awardXP(10, "Story event");
       } else {
         ev=AMBIENT_EVENTS[Math.floor(Math.random()*AMBIENT_EVENTS.length)];
         setCommsLog(prev=>[{...ev,time:elapsed,kind:"ambient"},...prev]);
@@ -587,15 +1343,98 @@ function App() {
       nextTickRef.current=Date.now()+(3+Math.random()*3)*60*1000;
     },5000);
     return()=>clearInterval(iv);
-  },[paused,buildings,knowledge,layer,storyLog,elapsed]);
+  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP]);
 
+  // Dave's Cousin — every 60s, pause a random owned building for 1s
   useEffect(()=>{
-    STORY_EVENTS.forEach(ev=>{
-      if(!storyLog.find(s=>s.id===ev.id)&&ev.trigger(buildings,knowledge,layer)){
-        setStoryLog(prev=>[{...ev,time:elapsed},...prev]);
+    if (rankEffect.special !== "daves_cousin" || paused) return;
+    const t = setInterval(()=>{
+      const ownedIds = Object.keys(buildings).filter(id => (buildings[id]||0) > 0);
+      if (ownedIds.length === 0) return;
+      const pick = ownedIds[Math.floor(Math.random()*ownedIds.length)];
+      setDavesPause({id:pick, until:Date.now()+1000});
+      setTimeout(()=>setDavesPause(null), 1100);
+    }, 60000);
+    return ()=>clearInterval(t);
+  },[rankEffect.special, paused, buildings]);
+
+  // Glass Cannon — every 5 min, halve a random owned building's count
+  useEffect(()=>{
+    if (rankEffect.special !== "glasscannon" || paused) return;
+    const t = setInterval(()=>{
+      const ownedIds = Object.keys(buildings).filter(id => (buildings[id]||0) > 1);
+      if (ownedIds.length === 0) return;
+      const pick = ownedIds[Math.floor(Math.random()*ownedIds.length)];
+      const cnt = buildings[pick];
+      const newCnt = Math.max(1, Math.floor(cnt/2));
+      const lost = cnt - newCnt;
+      setBuildings(prev => ({...prev, [pick]:newCnt}));
+      const bldName = BUILDINGS[pick]?.name || pick;
+      setTicker({icon:"💥", text:lost+"× "+bldName+" lost to catastrophic failure!", isStory:false});
+      setUnseenComms(n=>n+1);
+      AudioEngine.play("error");
+    }, 300000); // 5 min
+    return ()=>clearInterval(t);
+  },[rankEffect.special, paused, buildings]);
+
+  // Resource milestone XP — fires once per (resource × tier) per run
+  const MILESTONE_TIERS = [
+    {threshold:1000,    xp:10,  label:"1K"},
+    {threshold:10000,   xp:25,  label:"10K"},
+    {threshold:100000,  xp:50,  label:"100K"},
+    {threshold:1000000, xp:100, label:"1M"},
+    {threshold:1000000000, xp:250, label:"1B"},
+    {threshold:1000000000000, xp:500, label:"1T"},
+  ];
+  useEffect(()=>{
+    Object.entries(totalRes).forEach(([rk, val])=>{
+      MILESTONE_TIERS.forEach(t=>{
+        const key = rk+"_"+t.label;
+        if (!milestonesHitThisRun[key] && val >= t.threshold) {
+          setMilestonesHitThisRun(prev=>({...prev, [key]:true}));
+          awardXP(t.xp, t.label+" "+RES[rk].label);
+        }
+      });
+    });
+  // eslint-disable-next-line
+  },[totalRes]);
+
+  // Knowledge branch completion XP — fires once per branch per run
+  useEffect(()=>{
+    const branchMap = {};
+    KNOWLEDGE.forEach(k=>{
+      if (!branchMap[k.branch]) branchMap[k.branch] = [];
+      branchMap[k.branch].push(k.id);
+    });
+    Object.entries(branchMap).forEach(([branch, ids])=>{
+      if (branchesCompletedThisRun[branch]) return;
+      const allOwned = ids.every(id => knowledge.includes(id));
+      if (allOwned) {
+        setBranchesCompletedThisRun(prev=>({...prev, [branch]:true}));
+        awardXP(50, branch+" branch complete!");
       }
     });
-  },[buildings,knowledge,layer,elapsed,storyLog]);
+  // eslint-disable-next-line
+  },[knowledge]);
+
+  // Time-alive XP: 1 XP per minute of unpaused play
+  useEffect(()=>{
+    if (paused || won) return;
+    const t = setInterval(()=>{
+      awardXP(1, "Time played");
+    }, 60000);
+    return ()=>clearInterval(t);
+  },[paused, won, awardXP]);
+
+  // Tab visit XP — first visit per session
+  useEffect(()=>{
+    if (!tabsVisitedThisSession[tab]) {
+      setTabsVisitedThisSession(prev=>({...prev, [tab]:true}));
+      // small but skip "build" since it's the default
+      if (tab !== "build") awardXP(2, "Visited "+tab);
+    }
+  // eslint-disable-next-line
+  },[tab]);
 
   useEffect(()=>{
     MILESTONES_DEF.forEach(m=>{
@@ -610,75 +1449,343 @@ function App() {
       if(!achievements.includes(a.id)&&a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer)){
         setAchievements(prev=>[...prev,a.id]);
         setNewAch(a.name);
+        AudioEngine.play('achieve');
+        awardXP(25, "Achievement!");
         setTimeout(()=>setNewAch(null),3000);
       }
     });
-  },[totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer,achievements]);
+  },[totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer,achievements,awardXP]);
 
   const prod      = getProd();
   const canAfford = costs => canAffordWith(res,costs);
 
   const buildingCost = b => {
-    const cnt=buildings[b.id]||0, m=Math.pow(1.08,cnt);
+    const cnt=buildings[b.id]||0;
+    const scaleBase = rankEffect.special === "industrialist" ? 1.13 : 1.08;
+    const m=Math.pow(scaleBase, cnt);
     const disc=upgrades.includes("u15")&&b.id==="colonyship"?0.7:1;
-    if(b.cost){const c={};Object.entries(b.cost).forEach(([k,v])=>{c[k]=Math.floor(v*m*disc);});return c;}
-    return{[b.res]:Math.floor(b.base*m)};
+    const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id==="terraformer"||b.id==="stationdock"||(b.phase===true))) ? 0.5 : 1;
+    const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
+    if(b.cost){const c={};Object.entries(b.cost).forEach(([k,v])=>{c[k]=Math.floor(v*m*disc*rankMult);});return c;}
+    return{[b.res]:Math.floor(b.base*m*rankMult)};
+  };
+  const L3_UPGRADES = ["u13","u14","u15"]; // 3 main Layer-3 upgrades; phase 1 requires 2 of these
+  const reqsMet = b => {
+    const buildOk = !b.requires || Object.entries(b.requires).every(([id,n])=>(buildings[id]||0)>=n);
+    const knowOk  = !b.knowReq || (b.knowReq==="tier3" && TIER3_KNOW.some(id=>knowledge.includes(id)));
+    const upgOk   = !b.upgradeReq || L3_UPGRADES.filter(id=>upgrades.includes(id)).length >= b.upgradeReq;
+    // Phases: must be built in order, only one of each
+    let phaseOk = true;
+    if (b.phase) {
+      if ((buildings[b.id]||0) >= 1) phaseOk = false; // already built (one-time)
+      if (b.phaseNum && b.phaseNum > 1) {
+        const prevId = "cs_phase"+(b.phaseNum-1);
+        if ((buildings[prevId]||0) < 1) phaseOk = false;
+      }
+    }
+    return buildOk && knowOk && upgOk && phaseOk;
   };
   const buyBuilding = b => {
-    const cost=buildingCost(b); if(!canAfford(cost)) return;
-    setRes(r=>{const n={...r};Object.entries(cost).forEach(([k,v])=>{n[k]-=v;});return n;});
-    setBuildings(p=>({...p,[b.id]:(p[b.id]||0)+1}));
+    // Hold-repeat invokes this on a setInterval. We need fresh state on every tick because
+    // the closure goes stale. We read buildings via buildingsRef (mirror) and check resources
+    // inside setRes's functional updater. The building bump and ref update happen atomically
+    // in setBuildings so the next tick sees the post-buy count.
+    if (!reqsMet(b)) { AudioEngine.play('error'); return; }
+    let didBuy = false;
+    let costPaid = null;
+    setRes(prevR => {
+      // Read FRESH building count from ref (always in sync with React state via setBuildings updater below)
+      const cnt = buildingsRef.current[b.id] || 0;
+      // Recompute cost using fresh count
+      const scaleBase = rankEffect.special === "industrialist" ? 1.13 : 1.08;
+      const m = Math.pow(scaleBase, cnt);
+      const disc = upgrades.includes("u15") && b.id === "colonyship" ? 0.7 : 1;
+      const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id === "terraformer" || b.id === "stationdock" || b.phase===true)) ? 0.5 : 1;
+      const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
+      const freshCost = b.cost
+        ? Object.fromEntries(Object.entries(b.cost).map(([k,v]) => [k, Math.floor(v*m*disc*rankMult)]))
+        : { [b.res]: Math.floor(b.base * m * rankMult) };
+      const affordable = Object.entries(freshCost).every(([k,v]) => (prevR[k]||0) >= v);
+      if (!affordable) return prevR;
+      didBuy = true;
+      costPaid = freshCost;
+      const n = {...prevR};
+      Object.entries(freshCost).forEach(([k,v]) => { n[k] -= v; });
+      return n;
+    });
+    if (didBuy) {
+      // Update buildings AND the synchronized ref atomically
+      setBuildings(prevB => {
+        const nb = {...prevB, [b.id]: (prevB[b.id]||0) + 1};
+        buildingsRef.current = nb; // keep ref fresh for the next interval tick
+        return nb;
+      });
+      AudioEngine.play('buy');
+      awardXP(1, "Building");
+      if (XPStore.markFirst("buildings", b.id)) awardXP(25, "First "+b.name+"!");
+    }
   };
   const sellBuilding = b => {
-    const owned=buildings[b.id]||0; if(!owned) return;
-    const cost=buildingCost(b);
-    const refund=Object.fromEntries(Object.entries(cost).map(([k,v])=>[k,Math.floor(v*0.5)]));
-    setRes(r=>{const n={...r};Object.entries(refund).forEach(([k,v])=>{n[k]+=v;});return n;});
-    setBuildings(p=>({...p,[b.id]:owned-1}));
-    setTotalSells(s=>s+1);
+    let didSell = false;
+    let refund = null;
+    setBuildings(prevB => {
+      const owned = prevB[b.id] || 0;
+      if (!owned) return prevB;
+      didSell = true;
+      const idx = owned - 1;
+      const scaleBase = rankEffect.special === "industrialist" ? 1.13 : 1.08;
+      const m = Math.pow(scaleBase, idx);
+      const disc = upgrades.includes("u15") && b.id === "colonyship" ? 0.7 : 1;
+      const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id === "terraformer" || b.id === "stationdock" || b.phase===true)) ? 0.5 : 1;
+      const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
+      const freshCost = b.cost
+        ? Object.fromEntries(Object.entries(b.cost).map(([k,v]) => [k, Math.floor(v*m*disc*rankMult)]))
+        : { [b.res]: Math.floor(b.base * m * rankMult) };
+      const refundPct = rankEffect.sellRefundPct ?? 0.5;
+      refund = Object.fromEntries(Object.entries(freshCost).map(([k,v]) => [k, Math.floor(v*refundPct)]));
+      const nb = {...prevB, [b.id]: owned - 1};
+      buildingsRef.current = nb; // keep ref fresh
+      return nb;
+    });
+    if (didSell && refund) {
+      setRes(prevR => {
+        const n = {...prevR};
+        Object.entries(refund).forEach(([k,v]) => { n[k] += v; });
+        return n;
+      });
+      setTotalSells(s => s + 1);
+      if (rankEffect.special === "beans") awardXP(5, "Beans bonus");
+    }
   };
   const buyUpgrade = u => {
     if(upgrades.includes(u.id)||!canAfford(u.cost)) return;
     if(!Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)) return;
+    if(u.knowReq==="tier3" && !TIER3_KNOW.some(id=>knowledge.includes(id))) return;
     setRes(r=>{const n={...r};Object.entries(u.cost).forEach(([k,v])=>{n[k]-=v;});return n;});
     setUpgrades(p=>[...p,u.id]);
+    AudioEngine.play('achieve'); // upgrade chime reuses achieve tone
+    // XP: 5 per upgrade, +50 first time
+    awardXP(5, "Upgrade");
+    if (XPStore.markFirst("upgrades", u.id)) awardXP(50, "First-ever "+u.name);
   };
   const buyKnowledge = k => {
     const blocked=k.exclusive&&k.exclusive.some(ex=>knowledge.includes(ex));
-    if(knowledge.includes(k.id)||!canAfford(k.cost)||blocked) return;
+    const knowMult = rankEffect.knowledgeCostMult || 1;
+    const adjCost = Object.fromEntries(Object.entries(k.cost).map(([key,v])=>[key,Math.floor(v*knowMult)]));
+    if(knowledge.includes(k.id)||!canAfford(adjCost)||blocked) return;
     if(!k.requires.every(r=>knowledge.includes(r))) return;
-    setRes(r=>{const n={...r};Object.entries(k.cost).forEach(([key,v])=>{n[key]-=v;});return n;});
+    setRes(r=>{const n={...r};Object.entries(adjCost).forEach(([key,v])=>{n[key]-=v;});return n;});
     setKnowledge(p=>[...p,k.id]);
+    AudioEngine.play('knowledge');
+    // XP: 50 per knowledge node (Atomic Scholar 2x not in v0.6 set, so n/a)
+    awardXP(50, "Knowledge unlocked");
   };
+  // Compute starting buildings/layer based on rank
+  const computeStartBuildings = useCallback(()=>{
+    const eq = XPStore.get().equippedRank;
+    const eqRank = eq ? RANKS_BY_ID[eq] : null;
+    if (!eqRank) return {buildings:initBuildings(), layer:1};
+    if (eqRank.effect.special === "pioneer") {
+      return {buildings:{solar:5, drill:5, lab:5, habitat:5}, layer:1};
+    }
+    if (eqRank.effect.special === "architect_prime") {
+      return {
+        buildings:{solar:1, drill:1, lab:1, habitat:1, refinery:1, medbay:1, greenhouse:1, terraformer:1},
+        layer:2
+      };
+    }
+    return {buildings:initBuildings(), layer:1};
+  },[]);
+
   const doPrestige = () => {
     const lp=Math.floor(elapsed/60)+knowledge.length*2+layer*10;
+    // XP: 500 base, +100 if faster than personal best, mark planet visited
+    awardXP(500, "Colony Ship launched!");
+    const wasFaster = XPStore.setBest(elapsed);
+    if (wasFaster !== null && wasFaster > 0) awardXP(100, "New personal best!");
+    if (XPStore.markFirst("planets", currentPlanet)) awardXP(50, "First time at "+currentPlanet);
+    // Running Naked check — launch with no rank, after having previously launched with one
+    // Note: the secret "Naked Engineer" rank counts as no-rank for this achievement
+    const isNakedForAchievement = !activeRank || activeRank.effect.special === "naked_engineer";
+    const launchInfo = XPStore.recordLaunch(isNakedForAchievement ? null : activeRank.id);
+    if (launchInfo.nakedJustHappened) {
+      awardXP(200, "Running Naked!");
+      if (!achievements.includes("a24")) {
+        setAchievements(prev=>[...prev,"a24"]);
+        setNewAch("Running Naked");
+        AudioEngine.play('achieve');
+        setTimeout(()=>setNewAch(null),3000);
+      }
+    }
+    setXpData(XPStore.get());
     setPrestige(p=>p+1); setPrestigeBonus(b=>b*1.5); setLegacyPoints(prev=>prev+lp);
     setCurrentPlanet(PLANETS[prestige%PLANETS.length]);
-    setRes(initRes()); setTotalRes(initRes()); setBuildings(initBuildings()); setUpgrades([]);
+    // Apply rank starting resources, if any
+    const startRes = rankEffect.startResources ? {...initRes(), ...rankEffect.startResources} : initRes();
+    const {buildings:startBuilds, layer:startLayer} = computeStartBuildings();
+    setRes(startRes); setTotalRes(initRes()); setBuildings(startBuilds); setUpgrades([]);
     setKnowledge(prev=>prev.filter(id=>KNOWLEDGE.find(k=>k.id===id&&(k.crossBridge||k.branch.startsWith("cross_")))));
-    setLayer(1); setWon(false); setElapsed(0); setLaunchModal(false);
+    setLayer(startLayer); setWon(false); setElapsed(0); setLaunchModal(false);
+    setMilestonesHitThisRun({}); setBranchesCompletedThisRun({});
+    prevLayerRef.current = startLayer;
   };
 
   // hold-to-click
+  const touchUntilRef = useRef(0);
   const startHold = type => {
+    if (holdRef.current) clearInterval(holdRef.current); // safety: clear any leaked interval
+    ensureMusicStarted();
     handleClick(type);
     holdRef.current = setInterval(()=>handleClick(type), 100);
   };
   const stopHold = () => { if(holdRef.current){clearInterval(holdRef.current);holdRef.current=null;} };
+  const onClickMouseDown = type => { if (Date.now() < touchUntilRef.current) return; startHold(type); };
+  const onClickMouseUp   = ()   => { if (Date.now() < touchUntilRef.current) return; stopHold(); };
+  const onClickTouchStart = (e, type) => { e.preventDefault(); touchUntilRef.current = Date.now()+600; startHold(type); };
+  const onClickTouchEnd   = e => { e.preventDefault(); touchUntilRef.current = Date.now()+600; stopHold(); };
 
   const handleClick = type => {
-    const power=getClickPower(type);
-    setRes(r=>({...r,[type]:r[type]+power}));
-    setTotalRes(r=>({...r,[type]:r[type]+power}));
+    xpClickCounter.current++;
+    // The Intern: every 25th click does nothing
+    if (rankEffect.special === "intern" && xpClickCounter.current % 25 === 0) {
+      AudioEngine.play('error');
+      setClickRings(prev=>({...prev,[type]:Date.now()}));
+      // No resource gain, no XP, no totalClicks bump
+      return;
+    }
+    let power=getClickPower(type);
+    // Lucky Breaker — 5% chance of 10× click
+    let isCrit = false;
+    if (rankEffect.special === "lucky" && Math.random() < 0.05) {
+      power *= 10;
+      isCrit = true;
+    }
+    setRes(r=>{
+      const n = {...r, [type]: r[type] + power};
+      // Static Cling — also generate 25% of click power as every OTHER resource
+      if (rankEffect.special === "static_cling" && power > 0) {
+        const splash = power * 0.25;
+        Object.keys(n).forEach(k => { if (k !== type) n[k] += splash; });
+      }
+      return n;
+    });
+    setTotalRes(r=>{
+      const n = {...r, [type]: r[type] + power};
+      if (rankEffect.special === "static_cling" && power > 0) {
+        const splash = power * 0.25;
+        Object.keys(n).forEach(k => { if (k !== type) n[k] += splash; });
+      }
+      return n;
+    });
     setClickAnim(type); setTotalClicks(c=>c+1);
+    setClickRings(prev=>({...prev,[type]:Date.now()}));
+    AudioEngine.play(isCrit ? 'achieve' : 'click', type);
+    awardXP(1, isCrit ? "Lucky click! 🍀" : "Click");
     setTimeout(()=>setClickAnim(false),120);
   };
   const applyOffline = (secs,dream) => {
     const p=getProd(); const gained=initRes();
-    Object.keys(p).forEach(k=>{let g=p[k]*secs;if(!dream.bonus.res||dream.bonus.res===k)g*=dream.bonus.val;gained[k]=g;});
+    const investorBonus = rankEffect.special === "investor" ? 1.20 : 1.0;
+    Object.keys(p).forEach(k=>{
+      let g = p[k]*secs*investorBonus;
+      if(!dream.bonus.res||dream.bonus.res===k) g *= dream.bonus.val;
+      gained[k]=g;
+    });
     setRes(r=>{const n={...r};Object.keys(gained).forEach(k=>{n[k]+=gained[k];});return n;});
     setTotalRes(r=>{const n={...r};Object.keys(gained).forEach(k=>{n[k]+=gained[k];});return n;});
     setOfflineModal(null);
+    AudioEngine.play('offline');
+  };
+
+  // Audio control handlers
+  const updateMaster = v => { AudioEngine.setMaster(v); setAudioSettings(s=>({...s,master:v})); };
+  const updateSfx    = v => { AudioEngine.setSfx(v);    setAudioSettings(s=>({...s,sfx:v})); };
+  const updateMusic  = v => {
+    AudioEngine.setMusic(v);
+    setAudioSettings(s=>({...s,music:v}));
+    if (v > 0 && !audioSettings.muted) AudioEngine.startMusic();
+    if (v === 0) AudioEngine.stopMusic();
+  };
+  const toggleMute = () => {
+    const m = !audioSettings.muted;
+    AudioEngine.setMuted(m);
+    setAudioSettings(s=>({...s,muted:m}));
+    if (m) AudioEngine.stopMusic();
+    else if (audioSettings.music > 0) AudioEngine.startMusic();
+  };
+  const togglePause = () => {
+    setPaused(p=>{
+      const np = !p;
+      AudioEngine.play(np?"pause":"resume");
+      return np;
+    });
+  };
+
+  // Save / Load helpers
+  const SAVE_VERSION = 1;
+  const gatherSave = () => ({
+    v: SAVE_VERSION,
+    ts: Date.now(),
+    run: {res, totalRes, buildings, upgrades, knowledge, layer, prestige, prestigeBonus, legacyPoints, achievements, milestones, storyLog, commsLog, unseenComms, elapsed, totalClicks, totalSells, currentPlanet},
+    meta: XPStore.get(),
+  });
+  const encodeSave = obj => {
+    try { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+    catch (e) { return ""; }
+  };
+  const decodeSave = b64 => {
+    try { return JSON.parse(decodeURIComponent(escape(atob(b64.trim())))); }
+    catch (e) { return null; }
+  };
+  const exportSave = () => encodeSave(gatherSave());
+  const downloadSave = () => {
+    const blob = new Blob([exportSave()], {type:"text/plain"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const date = new Date().toISOString().slice(0,10);
+    a.download = "sbr-save-"+date+".txt";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setSaveStatus("Saved file downloaded.");
+    setTimeout(()=>setSaveStatus(""), 2500);
+  };
+  const copySave = async () => {
+    try {
+      await navigator.clipboard.writeText(exportSave());
+      setSaveStatus("Copied to clipboard.");
+    } catch(e) {
+      setSaveStatus("Copy failed — select the text above instead.");
+    }
+    setTimeout(()=>setSaveStatus(""), 2500);
+  };
+  const importSave = () => {
+    const data = decodeSave(importText);
+    if (!data || !data.run || !data.meta) {
+      setSaveStatus("Invalid save data.");
+      setTimeout(()=>setSaveStatus(""), 2500);
+      return;
+    }
+    if (!confirm("This will overwrite your current save. Continue?")) return;
+    const r = data.run;
+    setRes(r.res||initRes()); setTotalRes(r.totalRes||initRes());
+    setBuildings(r.buildings||{}); setUpgrades(r.upgrades||[]);
+    setKnowledge(r.knowledge||[]); setLayer(r.layer||1);
+    setPrestige(r.prestige||0); setPrestigeBonus(r.prestigeBonus||1);
+    setLegacyPoints(r.legacyPoints||0);
+    setAchievements(r.achievements||[]); setMilestones(r.milestones||[]);
+    setStoryLog(r.storyLog||[]); setCommsLog(r.commsLog||[]);
+    setUnseenComms(r.unseenComms||0); setElapsed(r.elapsed||0);
+    setTotalClicks(r.totalClicks||0); setTotalSells(r.totalSells||0);
+    if (r.currentPlanet) setCurrentPlanet(r.currentPlanet);
+    // Restore meta state (XP)
+    try {
+      localStorage.setItem("sbr_xp_v1", JSON.stringify(data.meta));
+      setXpData(XPStore.get());
+    } catch(e) {}
+    setSaveStatus("Save loaded successfully.");
+    setImportText("");
+    setTimeout(()=>{setSaveStatus(""); setSaveModal(false);}, 1500);
   };
 
   const lt      = LAYER_THEME[layer];
@@ -693,26 +1800,163 @@ function App() {
     {type:"fuel",      icon:"⛽",label:"Fuel",     unlocked:layer>=2},
   ].filter(c=>c.unlocked);
 
-  const visBuildings  = Object.values(BUILDINGS).filter(b=>b.layer<=layer);
+  const visBuildings  = Object.values(BUILDINGS).filter(b=>b.layer<=layer && !b.phase);
   const singleBlds    = visBuildings.filter(b=>!b.multi);
   const multiBlds     = visBuildings.filter(b=>b.multi);
-  const visUpgrades   = UPGRADES.filter(u=>u.layer<=layer);
+  const tier3Owned    = TIER3_KNOW.some(id => knowledge.includes(id));
+  const visUpgrades   = UPGRADES.filter(u=>u.layer<=layer && (u.knowReq!=="tier3" || tier3Owned));
 
   // badge counts
   const upgradeBadge  = visUpgrades.filter(u=>!upgrades.includes(u.id)&&Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)&&canAfford(u.cost)).length;
   const knowledgeBadge= KNOWLEDGE.filter(k=>!knowledge.includes(k.id)&&k.requires.every(r=>knowledge.includes(r))&&canAffordWith(res,k.cost)&&!(k.exclusive&&k.exclusive.some(ex=>knowledge.includes(ex)))).length;
   const achieveBadge  = ACHIEVEMENTS.filter(a=>!achievements.includes(a.id)&&a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer)).length;
+  // Ranks badge: new ranks (visible/unlocked, not owned) that the player can afford right now
+  const ranksBadge = (()=>{
+    const unlockCtx = {
+      totalLaunches: xpData.totalLaunches || 0,
+      runningNakedDone: !!xpData.runningNakedDone,
+      uniquePlanets: Object.keys(xpData.firstTime?.planets || {}).length,
+    };
+    return RANKS.filter(r=>{
+      if (xpData.ownedRanks.includes(r.id)) return false;
+      if (r.secret && !(r.unlockCheck && r.unlockCheck(unlockCtx))) return false;
+      return xpData.xp >= r.cost;
+    }).length;
+  })();
 
-  const TABS = ["build","upgrade","knowledge","achievements","launch","support"];
+  const TABS = ["build","upgrade","knowledge","achievements","ranks","launch"];
 
-  const bCardProps = {buildings,res,prod,canAfford,buildingCost,buyBuilding,sellBuilding};
+  const bCardProps = {buildings,res,prod,canAfford,buildingCost,buyBuilding,sellBuilding,knowledge};
 
   return (
     <div style={{fontFamily:"system-ui,sans-serif",minHeight:"100vh",background:"#080d1a",color:"#c8d8f0",padding:"10px 8px",maxWidth:720,margin:"0 auto"}}>
 
+      {/* Layer transition cinematic */}
+      {layerTransition&&(
+        <div className="layer-transition" style={{color:layerTransition.color}}>
+          <div className="layer-stars"/>
+          <div className="lt-icon">{layerTransition.icon}</div>
+          <div className="lt-name" style={{color:layerTransition.color}}>{layerTransition.name.toUpperCase()}</div>
+          <div className="lt-sub">SYSTEMS ONLINE</div>
+        </div>
+      )}
+
+      {/* Audio settings modal */}
+      {audioModal&&(
+        <div style={{position:"fixed",inset:0,background:"#000000cc",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}} onClick={()=>setAudioModal(false)}>
+          <div style={{background:"#0a1525",border:"1px solid #1e3a5f",borderRadius:12,padding:"20px 24px",maxWidth:360,width:"90%"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <span style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>Audio Settings</span>
+              <button onClick={()=>setAudioModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+              <button onClick={toggleMute} style={{padding:"8px 14px",background:audioSettings.muted?"#5a1515":"#0d2a4a",border:"1px solid "+(audioSettings.muted?"#eb5757":"#4a9eff"),borderRadius:6,color:audioSettings.muted?"#ff9999":"#4a9eff",fontSize:13,cursor:"pointer",fontWeight:700,minWidth:80}}>{audioSettings.muted?"🔇 Muted":"🔊 On"}</button>
+              <span style={{fontSize:11,color:"#5a7a9a",flex:1}}>{audioSettings.muted?"Click to unmute":"All sound enabled"}</span>
+            </div>
+            {[
+              {label:"Master", val:audioSettings.master, set:updateMaster, icon:"🎚"},
+              {label:"Music",  val:audioSettings.music,  set:updateMusic,  icon:"🎵"},
+              {label:"SFX",    val:audioSettings.sfx,    set:updateSfx,    icon:"🔔"},
+            ].map(s=>(
+              <div key={s.label} style={{marginBottom:12,opacity:audioSettings.muted?0.4:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#a0c4ff",marginBottom:4}}>
+                  <span>{s.icon+" "+s.label}</span>
+                  <span style={{color:"#5a7a9a"}}>{Math.round(s.val*100)+"%"}</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.01" value={s.val} disabled={audioSettings.muted} onChange={e=>s.set(parseFloat(e.target.value))} style={{width:"100%",accentColor:"#4a9eff"}}/>
+              </div>
+            ))}
+            <div style={{fontSize:10,color:"#3a5a7a",marginTop:14,lineHeight:1.5,textAlign:"center"}}>All audio is generated procedurally in the browser. No files downloaded.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Save / Load modal */}
+      {saveModal&&(
+        <div style={{position:"fixed",inset:0,background:"#000000dd",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000,padding:8}} onClick={()=>setSaveModal(false)}>
+          <div style={{background:"#0a1525",border:"1px solid #6f9ec9",borderRadius:12,padding:"16px 18px",maxWidth:540,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #1e3a5f"}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>💾 Save / Load</div>
+              <button onClick={()=>setSaveModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
+            </div>
+
+            <div style={{fontSize:11,fontWeight:700,color:"#6fcf97",marginBottom:6}}>EXPORT</div>
+            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:6,lineHeight:1.5}}>Your full save state — including XP, owned Ranks, and current run — encoded as base64. Copy it or download it as a .txt file to back up.</div>
+            <textarea readOnly value={exportSave()} onClick={e=>e.target.select()} style={{width:"100%",height:80,background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:6,color:"#8a9aaa",fontSize:10,fontFamily:"monospace",padding:6,resize:"vertical",boxSizing:"border-box",marginBottom:6}}/>
+            <div style={{display:"flex",gap:6,marginBottom:14}}>
+              <button onClick={copySave} style={{flex:1,padding:"8px 12px",background:"#0d2a4a",border:"1px solid #4a9eff",borderRadius:5,color:"#4a9eff",fontSize:11,cursor:"pointer",fontWeight:700}}>📋 Copy</button>
+              <button onClick={downloadSave} style={{flex:1,padding:"8px 12px",background:"#0d2a0d",border:"1px solid #6fcf97",borderRadius:5,color:"#6fcf97",fontSize:11,cursor:"pointer",fontWeight:700}}>⬇ Download .txt</button>
+            </div>
+
+            <div style={{fontSize:11,fontWeight:700,color:"#e6a817",marginBottom:6}}>IMPORT</div>
+            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:6,lineHeight:1.5}}>Paste a previously exported save below and click Load. <strong style={{color:"#eb5757"}}>This will overwrite your current save.</strong></div>
+            <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder="Paste your save here..." style={{width:"100%",height:80,background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:6,color:"#c8d8f0",fontSize:10,fontFamily:"monospace",padding:6,resize:"vertical",boxSizing:"border-box",marginBottom:6}}/>
+            <button onClick={importSave} disabled={!importText.trim()} style={{padding:"8px 12px",background:importText.trim()?"#2a0d0d":"#0d1a2e",border:"1px solid "+(importText.trim()?"#eb5757":"#1e3a5f"),borderRadius:5,color:importText.trim()?"#ff9999":"#3a5a7a",fontSize:11,cursor:importText.trim()?"pointer":"not-allowed",fontWeight:700,width:"100%"}}>Load Save</button>
+
+            {saveStatus&&<div style={{fontSize:11,color:"#6fcf97",textAlign:"center",marginTop:10,padding:6,background:"#0d2a0d",borderRadius:4,border:"1px solid #2a5a3a"}}>{saveStatus}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Support / Notes modal */}
+      {supportModal&&(
+        <div style={{position:"fixed",inset:0,background:"#000000dd",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000,padding:8}} onClick={()=>setSupportModal(false)}>
+          <div style={{background:"#0a1525",border:"1px solid #6f9ec9",borderRadius:12,padding:"16px 18px",maxWidth:540,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #1e3a5f"}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>ℹ Support & Patch Notes</div>
+              <button onClick={()=>setSupportModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
+            </div>
+            <div style={{overflowY:"auto",flex:1}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#a0c4ff",marginBottom:6,letterSpacing:1}}>📡 SUPPORT</div>
+              <div style={{textAlign:"center",padding:"8px 0 16px",borderBottom:"1px solid #1e3a5f",marginBottom:14}}>
+                <div style={{fontSize:11,color:"#5a7a9a",marginBottom:10,lineHeight:1.6}}>Found a bug? Have a feature idea? Send us a message.</div>
+                <a href="mailto:spacebaserace@gmail.com?subject=TICKET%20Space%20Base%20Race"
+                  style={{display:"inline-block",padding:"10px 20px",background:"#0d2a4a",border:"1px solid #4a9eff",borderRadius:8,color:"#4a9eff",fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                  spacebaserace@gmail.com
+                </a>
+                <div style={{fontSize:10,color:"#3a5a7a",marginTop:8}}>Subject: TICKET Space Base Race</div>
+              </div>
+
+              <div style={{fontSize:11,fontWeight:700,color:"#a0c4ff",marginBottom:6,letterSpacing:1}}>📋 PATCH NOTES</div>
+              {PATCH_NOTES.map(p=>(
+                <div key={p.version} style={{background:"#080d1a",border:"1px solid "+(p.date==="Latest"?"#4a9eff":"#1e3a5f"),borderRadius:8,padding:"10px 14px",marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,paddingBottom:6,borderBottom:"1px solid #1e3a5f"}}>
+                    <span style={{fontSize:13,fontWeight:700,color:p.date==="Latest"?"#4a9eff":"#a0c4ff"}}>{p.version}</span>
+                    {p.date==="Latest"&&<span style={{fontSize:9,color:"#4a9eff",background:"#0d2a4a",padding:"1px 6px",borderRadius:3,fontWeight:700}}>LATEST</span>}
+                  </div>
+                  <ul style={{margin:0,paddingLeft:18}}>
+                    {p.changes.map((c,i)=><li key={i} style={{fontSize:11,color:"#c8d8f0",marginBottom:4,lineHeight:1.5}}>{c}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* XP Store modal */}
+      {xpStoreOpen&&(
+        <div style={{position:"fixed",inset:0,background:"#000000dd",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000,padding:8}} onClick={()=>setXpStoreOpen(false)}>
+          <div style={{background:"#0a1525",border:"1px solid #6f9ec9",borderRadius:12,padding:"16px 18px",maxWidth:540,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{fontSize:15,fontWeight:700,color:"#a0c4ff"}}>★ XP & Ranks</div>
+              <button onClick={()=>setXpStoreOpen(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
+            </div>
+            <RanksContent xpData={xpData} setXpData={setXpData} activeRank={activeRank} prestige={prestige}/>
+          </div>
+        </div>
+      )}
+
+      {/* XP popups (always visible, top-right) */}
+      <div className="xp-popup-stack">
+        {xpPopups.map(p=>(
+          <div key={p.id} className="xp-popup">+{p.amount} XP{p.reason&&<span className="xp-reason">{p.reason}</span>}</div>
+        ))}
+      </div>
+
       {paused&&(
         <div style={{position:"fixed",inset:0,zIndex:2000,backdropFilter:"blur(8px)",background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <button onClick={()=>setPaused(false)} style={{padding:"20px 48px",background:"#0d1a2e",border:"2px solid #4a9eff",borderRadius:12,color:"#a0c4ff",fontSize:20,fontWeight:700,cursor:"pointer"}}>Resume</button>
+          <button onClick={togglePause} style={{padding:"20px 48px",background:"#0d1a2e",border:"2px solid #4a9eff",borderRadius:12,color:"#a0c4ff",fontSize:20,fontWeight:700,cursor:"pointer"}}>Resume</button>
         </div>
       )}
 
@@ -739,7 +1983,7 @@ function App() {
           <div style={{background:"#0a1525",border:"1px solid "+accent,borderRadius:12,padding:"20px 24px",maxWidth:380,width:"90%"}}>
             <div style={{fontSize:28,marginBottom:6,textAlign:"center"}}>🌙</div>
             <div style={{fontSize:16,fontWeight:700,color:"#a0c4ff",textAlign:"center",marginBottom:4}}>Welcome Back</div>
-            <div style={{fontSize:12,color:"#5a7a9a",textAlign:"center",marginBottom:12}}>{"Away for "+FMTT(offlineModal.actual)+" — base ran for "+FMTT(offlineModal.secs)+" (8h cap)"}</div>
+            <div style={{fontSize:12,color:"#5a7a9a",textAlign:"center",marginBottom:12}}>{"Away for "+FMTT(offlineModal.actual)+" — base ran for "+FMTT(offlineModal.secs)+" ("+(offlineModal.investor?"16h cap, +20% rate":"8h cap")+")"}</div>
             <div style={{background:"#080d1a",borderRadius:8,padding:"10px 12px",marginBottom:12,border:"1px solid #1e3a5f"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#e6a817",marginBottom:4}}>{offlineModal.dream.name}</div>
               <div style={{fontSize:11,color:"#8a9aaa",marginBottom:4,fontStyle:"italic"}}>{offlineModal.dream.flavor}</div>
@@ -788,7 +2032,15 @@ function App() {
           <div style={{display:"flex",gap:2}}>{milestones.map(mid=>{const m=MILESTONES_DEF.find(x=>x.id===mid);return m?<span key={mid} title={m.name} style={{fontSize:14,cursor:"default"}}>{m.badge}</span>:null;})}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          <button onClick={()=>setPaused(p=>!p)} style={{padding:"6px 12px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}}>Pause</button>
+          <button onClick={()=>setXpStoreOpen(true)} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid #6f9ec9",borderRadius:6,color:"#a0c4ff",fontSize:11,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:4}} title="XP & Ranks">
+            <span style={{color:"#e6a817"}}>★</span>
+            <span>{FMT(xpData.xp)}</span>
+            {activeRank&&<span style={{marginLeft:4,fontSize:13}} title={activeRank.name}>{activeRank.icon}</span>}
+          </button>
+          <button onClick={()=>{AudioEngine.resume();setAudioModal(true);}} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Audio settings">{audioSettings.muted?"🔇":"🔊"}</button>
+          <button onClick={()=>setSaveModal(true)} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Save / Load">💾</button>
+          <button onClick={()=>setSupportModal(true)} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Support & Patch Notes">ℹ️</button>
+          <button onClick={togglePause} style={{padding:"6px 12px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}}>Pause</button>
           <span style={{fontSize:13,fontFamily:"monospace",fontWeight:700,color:won?"#6fcf97":"#a0c4ff",background:"#080d1a",padding:"3px 10px",borderRadius:6,border:"1px solid "+accent}}>{won?"🏁 ":"⏱ "}{fmtTime(elapsed)}</span>
           {prestige>0&&<span style={{fontSize:11,color:"#b07ec9"}}>{prestige+"x | "+prestigeBonus.toFixed(1)+"x"}</span>}
           {legacyPoints>0&&<span style={{fontSize:11,color:"#e6a817"}}>{"LP: "+legacyPoints}</span>}
@@ -835,14 +2087,23 @@ function App() {
         {clickBtns.map(c=>(
           <div key={c.type} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
             <div
-              className="no-select click-btn"
-              onMouseDown={()=>startHold(c.type)}
-              onMouseUp={stopHold}
-              onMouseLeave={stopHold}
-              onTouchStart={e=>{e.preventDefault();startHold(c.type);}}
-              onTouchEnd={stopHold}
-              style={{width:64,height:64,borderRadius:"50%",background:clickAnim===c.type?"#e6a817":"#0d1a2e",border:"2px solid "+RES[c.type].color,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,transition:"background 0.1s",boxShadow:"0 0 12px "+RES[c.type].color+"44"}}>
+              className={"no-select click-btn"+(clickAnim===c.type?" click-pulse":"")}
+              onMouseDown={()=>onClickMouseDown(c.type)}
+              onMouseUp={onClickMouseUp}
+              onMouseLeave={onClickMouseUp}
+              onTouchStart={e=>onClickTouchStart(e, c.type)}
+              onTouchEnd={onClickTouchEnd}
+              onTouchCancel={onClickTouchEnd}
+              style={{width:64,height:64,borderRadius:"50%",background:clickAnim===c.type?RES[c.type].color+"33":"#0d1a2e",border:"2px solid "+RES[c.type].color,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,transition:"background 0.1s",boxShadow:"0 0 12px "+RES[c.type].color+"44",position:"relative"}}>
               {c.icon}
+              {clickRings[c.type]&&(
+                <span key={clickRings[c.type]} className="click-ring" style={{color:RES[c.type].color,borderColor:RES[c.type].color,width:64,height:64}}/>
+              )}
+              {clickRings[c.type]&&(
+                <span key={"p"+clickRings[c.type]} className="click-particles" style={{color:RES[c.type].color}}>
+                  <span/><span/><span/><span/><span/><span/><span/><span/>
+                </span>
+              )}
             </div>
             <span style={{fontSize:9,color:"#5a7a9a"}}>{c.label}</span>
             <span style={{fontSize:9,color:RES[c.type].color}}>{"+"+FMT(getClickPower(c.type))}</span>
@@ -858,7 +2119,7 @@ function App() {
 
       {/* Ticker */}
       {ticker&&(
-        <div style={{background:"#090f1e",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 10px",marginBottom:8,display:"flex",alignItems:"flex-start",gap:8,position:"relative"}}>
+        <div style={{background:"#090f1e",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 10px",marginBottom:8,display:"flex",alignItems:"flex-start",gap:8}}>
           <span style={{fontSize:15,flexShrink:0,marginTop:1}}>{ticker.icon||"📻"}</span>
           <div style={{flex:1,minWidth:0}}>
             {ticker.isStory&&ticker.title&&<div style={{fontSize:10,fontWeight:700,color:"#6f9ec9",marginBottom:2}}>{ticker.title}</div>}
@@ -868,17 +2129,16 @@ function App() {
             Log
             {unseenComms>0&&<span style={{position:"absolute",top:-5,right:-5,background:"#eb5757",color:"#fff",borderRadius:8,fontSize:8,padding:"0 3px",lineHeight:"14px"}}>{unseenComms}</span>}
           </button>
-          <button onClick={()=>setTicker(null)} style={{position:"absolute",top:4,right:4,background:"none",border:"none",color:"#3a5a7a",cursor:"pointer",fontSize:12,padding:"2px 4px"}}>X</button>
         </div>
       )}
 
       {/* Tab bar */}
       <div style={{display:"flex",gap:1,padding:"6px 4px 0",background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
         {TABS.map(t=>{
-          const badge = t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:0;
+          const badge = t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:t==="ranks"?ranksBadge:0;
           return(
             <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"6px 1px",border:"none",borderRadius:"5px 5px 0 0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:9,fontWeight:tab===t?700:400,whiteSpace:"nowrap",position:"relative"}}>
-              {t==="achievements"?<span className="tab-label-ach-short"></span>:t==="knowledge"?<span className="tab-label-know-short"></span>:t==="support"?"Support":t==="launch"?"Launch":t.charAt(0).toUpperCase()+t.slice(1)}
+              {t==="achievements"?<span className="tab-label-ach-short"></span>:t==="knowledge"?<span className="tab-label-know-short"></span>:t==="launch"?"Launch":t==="ranks"?"Ranks":t.charAt(0).toUpperCase()+t.slice(1)}
               {badge>0&&<Badge count={badge}/>}
             </button>
           );
@@ -918,37 +2178,43 @@ function App() {
           </div>
         )}
 
-        {tab==="upgrade"&&(
-          <div className={layer>=2?"res-grid-5":"res-grid-4"}>
-            {resCols.map(rk=>{
-              const ri=RES[rk];
-              const col=visUpgrades.filter(u=>Object.keys(u.cost).includes(rk)||Object.keys(u.req).includes(rk));
-              if(col.length===0) return null;
-              return(
-                <div key={rk} style={{background:COL_BG[rk],border:"1px solid "+COL_BORDER[rk],borderRadius:8,padding:"6px 5px",display:"flex",flexDirection:"column",gap:5}}>
-                  <div style={{textAlign:"center",fontSize:11,fontWeight:700,color:ri.color,paddingBottom:3,borderBottom:"1px solid "+COL_BORDER[rk]}}>{ri.icon+" "+ri.label}</div>
-                  {col.map(u=>{
-                    const owned=upgrades.includes(u.id),afford=canAfford(u.cost);
-                    const req=Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v);
-                    const wait=(!owned&&req&&!afford)?timeToAfford(res,prod,u.cost):null;
-                    return(
-                      <div key={u.id} onClick={()=>buyUpgrade(u)} style={{background:"#080d1a",border:"1px solid "+(owned?"#1a4a1a":afford&&req?"#1e4a7f":"#0d1a2e"),borderRadius:6,padding:"6px 7px",opacity:owned||req?1:0.45,cursor:!owned&&req?"pointer":"default",display:"flex",flexDirection:"column",gap:3}}>
-                        <div style={{display:"flex",justifyContent:"space-between"}}>
-                          <span style={{fontSize:11,fontWeight:700,color:owned?"#6fcf97":"#c8d8f0",flex:1}}>{u.layer===3?"🌌 ":u.layer===2?"🛸 ":""}{u.name}</span>
-                          {owned&&<span style={{color:"#6fcf97",fontSize:12}}>V</span>}
-                        </div>
-                        <div style={{fontSize:9,color:"#4a7a9a"}}>{u.effect}</div>
-                        {!req&&<div style={{fontSize:9,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v])=>FMT(v)+RES[k].icon).join(" + ")}</div>}
-                        {req&&!owned&&<div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}</div>}
-                        {wait!==null&&isFinite(wait)&&<div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {tab==="upgrade"&&(()=>{
+          // Sort: affordable+req met → req met but unaffordable → req unmet → owned (last)
+          const sorted = [...visUpgrades].sort((a,b)=>{
+            const ao=upgrades.includes(a.id), bo=upgrades.includes(b.id);
+            if (ao!==bo) return ao?1:-1; // owned to bottom
+            const ar=Object.entries(a.req).every(([k,v])=>(totalRes[k]||0)>=v);
+            const br=Object.entries(b.req).every(([k,v])=>(totalRes[k]||0)>=v);
+            if (ar!==br) return ar?-1:1; // unmet req to bottom
+            const aa=canAfford(a.cost), ba=canAfford(b.cost);
+            if (aa!==ba) return aa?-1:1; // affordable first
+            return (a.layer||1)-(b.layer||1);
+          });
+          return(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:6}}>
+              {sorted.map(u=>{
+                const owned=upgrades.includes(u.id),afford=canAfford(u.cost);
+                const req=Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v);
+                const wait=(!owned&&req&&!afford)?timeToAfford(res,prod,u.cost):null;
+                // primary resource = first cost key, used for accent color
+                const primaryRes = Object.keys(u.cost)[0] || Object.keys(u.req)[0] || "energy";
+                const accent = RES[primaryRes].color;
+                return(
+                  <div key={u.id} onClick={()=>buyUpgrade(u)} style={{background:owned?"#0a1a0a":"#080d1a",border:"1px solid "+(owned?"#2a5a2a":afford&&req?accent+"99":req?"#1e3a5f":"#0d1a2e"),borderRadius:6,padding:"7px 8px",opacity:owned?0.75:req?1:0.45,cursor:!owned&&req?"pointer":"default",display:"flex",flexDirection:"column",gap:3,borderLeft:"3px solid "+(owned?"#2a5a2a":accent)}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:4}}>
+                      <span style={{fontSize:11,fontWeight:700,color:owned?"#6fcf97":"#c8d8f0",flex:1,lineHeight:1.25}}>{u.knowReq==="tier3"?"👆 ":u.layer===3?"🌌 ":u.layer===2?"🛸 ":""}{u.name}</span>
+                      {owned&&<span style={{color:"#6fcf97",fontSize:12,flexShrink:0}}>✓</span>}
+                    </div>
+                    <div style={{fontSize:9,color:"#4a7a9a",lineHeight:1.35}}>{u.effect}</div>
+                    {!req&&!owned&&<div style={{fontSize:9,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v])=>FMT(v)+RES[k].icon).join(" + ")}</div>}
+                    {req&&!owned&&<div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}</div>}
+                    {wait!==null&&isFinite(wait)&&<div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {tab==="knowledge"&&<KnowledgeTree knowledge={knowledge} res={res} prod={prod} buyKnowledge={buyKnowledge} layer={layer}/>}
 
@@ -970,33 +2236,122 @@ function App() {
           </div>
         )}
 
-        {tab==="launch"&&(
-          <div style={{textAlign:"center",padding:"10px 0"}}>
-            <div style={{fontSize:40,marginBottom:8}}>🚀</div>
-            <div style={{fontSize:16,fontWeight:700,color:"#a0c4ff",marginBottom:4}}>Colony Ship Program</div>
-            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:12,maxWidth:380,margin:"0 auto 12px",lineHeight:1.6}}>Build the Colony Ship in Layer 3. Cross-branch knowledge survives. 1.5x bonus stacks each run.</div>
-            {milestones.length>0&&(
-              <div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center",marginBottom:12}}>
-                {milestones.map(mid=>{const m=MILESTONES_DEF.find(x=>x.id===mid);return m?<div key={mid} style={{background:"#0a1220",border:"1px solid "+m.color,borderRadius:6,padding:"4px 10px",fontSize:11,color:m.color}}>{m.badge+" "+m.name}</div>:null;})}
-              </div>
-            )}
-            <div style={{background:"#080d1a",borderRadius:8,padding:"10px 14px",marginBottom:12,border:"1px solid #1e3a5f",maxWidth:340,margin:"0 auto 12px",textAlign:"left"}}>
-              <div style={{fontSize:11,color:"#5a7a9a"}}>{"Planet: "+currentPlanet}</div>
-              <div style={{fontSize:11,color:"#5a7a9a"}}>{"Layer: "+layer+" of 3"}</div>
-              <div style={{fontSize:11,color:"#5a7a9a"}}>{"Time: "+fmtTime(elapsed)}</div>
-              <div style={{fontSize:11,color:"#5a7a9a"}}>{"Bonus: "+prestigeBonus.toFixed(1)+"x"}</div>
-              <div style={{fontSize:11,color:"#e6a817"}}>{"Legacy Points: "+legacyPoints}</div>
-            </div>
-            <div style={{fontSize:11,color:"#5a7a9a",marginBottom:4}}>Next destination:</div>
-            <div style={{fontSize:14,color:"#a0c4ff",fontWeight:700,marginBottom:12}}>{PLANETS[prestige%PLANETS.length]}</div>
-            {won
-              ?<button onClick={()=>setLaunchModal(true)} style={{padding:"14px 36px",borderRadius:8,border:"none",background:"#8b0000",color:"#ff9999",cursor:"pointer",fontSize:15,fontWeight:700}}>Launch Colony Ship</button>
-              :<div style={{fontSize:12,color:"#4a6a8a"}}>Build the Colony Ship to complete this run.</div>
-            }
+        {tab==="ranks"&&(
+          <div style={{maxWidth:540,margin:"0 auto",display:"flex",flexDirection:"column",height:"calc(100vh - 280px)",minHeight:300}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff",marginBottom:4}}>★ XP & Ranks</div>
+            <RanksContent xpData={xpData} setXpData={setXpData} activeRank={activeRank} prestige={prestige}/>
           </div>
         )}
 
-        {tab==="support"&&<SupportTab/>}
+        {tab==="launch"&&(()=>{
+          const phaseDefs = PHASE_IDS.map(id => BUILDINGS[id]);
+          // Compute state of each phase — built / current (next available) / locked
+          const phaseStates = phaseDefs.map(p => {
+            const built = (buildings[p.id]||0) >= 1;
+            const isNext = !built && reqsMet(p);
+            return {p, built, isNext, locked: !built && !isNext};
+          });
+          // Phase 1 gate prereqs — surfaces what's needed to start construction
+          const phase1 = BUILDINGS.cs_phase1;
+          const buildOk1 = !phase1.requires || Object.entries(phase1.requires).every(([id,n])=>(buildings[id]||0)>=n);
+          const knowOk1  = TIER3_KNOW.some(id=>knowledge.includes(id));
+          const upgCount = L3_UPGRADES.filter(id=>upgrades.includes(id)).length;
+          const upgOk1   = upgCount >= 2;
+          const constructionStarted = phaseStates.some(s => s.built);
+          const showGates = !constructionStarted; // hide once you start phase 1
+          return (
+            <div style={{maxWidth:540,margin:"0 auto",padding:"4px 0"}}>
+              {/* Run summary */}
+              <div style={{textAlign:"center",marginBottom:12}}>
+                <div style={{fontSize:30,marginBottom:4}}>🚀</div>
+                <div style={{fontSize:15,fontWeight:700,color:"#a0c4ff"}}>Colony Ship Program</div>
+                <div style={{fontSize:11,color:"#5a7a9a",marginTop:4,lineHeight:1.5}}>{"Planet "+currentPlanet+" • Layer "+layer+"/3 • "+fmtTime(elapsed)+" • Bonus "+prestigeBonus.toFixed(1)+"× • LP "+legacyPoints}</div>
+              </div>
+
+              {/* Phase 1 entry gates (hide once any phase is built) */}
+              {showGates && (
+                <div style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#a0c4ff",marginBottom:6,letterSpacing:1}}>🛠 BEFORE CONSTRUCTION CAN BEGIN</div>
+                  <div style={{fontSize:10,color:"#c8d8f0",lineHeight:1.6,display:"flex",flexDirection:"column",gap:3}}>
+                    <div style={{color:knowOk1?"#6fcf97":"#8a6a2a"}}>{knowOk1?"✓":"○"} Any tier-3 knowledge node owned</div>
+                    <div style={{color:upgOk1?"#6fcf97":"#8a6a2a"}}>{upgOk1?"✓":"○"} 2 of 3 Layer-3 upgrades (Warp Field, Autonomous Probes, Starcore Drive) — owned: {upgCount}/3</div>
+                    <div style={{color:buildOk1?"#6fcf97":"#8a6a2a"}}>{buildOk1?"✓":"○"} Buildings: {Object.entries(phase1.requires).map(([id,n])=>{
+                      const have=buildings[id]||0;
+                      return (have>=n?"✓":"○")+" "+n+"× "+BUILDINGS[id].name+(have<n?" ("+have+"/"+n+")":"");
+                    }).join(" · ")}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Phase cards */}
+              <div style={{fontSize:11,fontWeight:700,color:"#a0c4ff",marginBottom:6,letterSpacing:1}}>🌌 CONSTRUCTION PHASES</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
+                {phaseStates.map(({p, built, isNext, locked}) => {
+                  const cost = buildingCost(p);
+                  const afford = canAfford(cost);
+                  const wait = !built && isNext && !afford ? timeToAfford(res, prod, cost) : null;
+                  return (
+                    <div key={p.id} style={{background:built?"#0a1a0a":isNext?"#0d1a2e":"#080d1a",border:"1px solid "+(built?"#2a5a2a":isNext?"#4a9eff":"#1e3a5f"),borderRadius:8,padding:"8px 12px",opacity:locked?0.5:1,display:"flex",flexDirection:"column",gap:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{fontSize:18,minWidth:32,textAlign:"center"}}>{built?"✅":locked?"🔒":"🔧"}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:700,color:built?"#6fcf97":isNext?"#a0c4ff":"#8a9aaa"}}>{"Phase "+p.phaseNum+" — "+p.name}</div>
+                          <div style={{fontSize:10,color:"#5a7a9a",lineHeight:1.4}}>{p.desc}</div>
+                        </div>
+                      </div>
+                      {!built && isNext && (
+                        <>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:2}}>
+                            {Object.entries(cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}
+                          </div>
+                          {wait!==null && isFinite(wait) && <div style={{fontSize:9,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+                          <button onClick={()=>buyBuilding(p)} disabled={!afford} style={{padding:"6px 10px",borderRadius:5,border:"1px solid "+(afford?"#4a9eff":"#1e3a5f"),background:afford?"#0d2a4a":"#080d1a",color:afford?"#4a9eff":"#3a5a7a",fontSize:11,cursor:afford?"pointer":"not-allowed",fontWeight:700,marginTop:2}}>Build {p.name}</button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Launch readiness */}
+              {allPhasesDone && (
+                <div style={{background:launchResReady?"#0d2a4a":"#080d1a",border:"1px solid "+(launchResReady?"#e6a817":"#1e3a5f"),borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#e6a817",marginBottom:6,letterSpacing:1}}>🌟 LAUNCH READINESS</div>
+                  <div style={{fontSize:10,color:"#c8d8f0",marginBottom:6,lineHeight:1.5}}>The ship is built. Stockpile {FMT(LAUNCH_THRESHOLD)} of every resource for the journey.</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))",gap:4}}>
+                    {["energy","minerals","research","fuel","population"].map(rk=>{
+                      const have = res[rk]||0;
+                      const ok = have >= LAUNCH_THRESHOLD;
+                      const pct = Math.min(100, (have/LAUNCH_THRESHOLD)*100);
+                      return (
+                        <div key={rk} style={{background:"#080d1a",border:"1px solid "+(ok?"#2a5a2a":"#1e3a5f"),borderRadius:5,padding:"4px 6px"}}>
+                          <div style={{fontSize:10,color:ok?"#6fcf97":RES[rk].color,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <span>{RES[rk].icon+" "+RES[rk].label}</span>
+                            <span style={{fontWeight:700}}>{ok?"✓":Math.floor(pct)+"%"}</span>
+                          </div>
+                          <div style={{fontSize:9,color:"#5a7a9a"}}>{FMT(Math.floor(have))+"/"+FMT(LAUNCH_THRESHOLD)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Launch button */}
+              <div style={{textAlign:"center",marginTop:10}}>
+                <div style={{fontSize:11,color:"#5a7a9a",marginBottom:4}}>Next destination:</div>
+                <div style={{fontSize:14,color:"#a0c4ff",fontWeight:700,marginBottom:10}}>{PLANETS[prestige%PLANETS.length]}</div>
+                {canLaunch
+                  ? <button onClick={()=>{setWon(true);AudioEngine.play("launch");setLaunchModal(true);}} style={{padding:"16px 40px",borderRadius:10,border:"2px solid #e6a817",background:"#5a2a00",color:"#ffe680",cursor:"pointer",fontSize:16,fontWeight:700,boxShadow:"0 0 20px #e6a81788"}}>🚀 LAUNCH COLONY SHIP</button>
+                  : allPhasesDone
+                    ? <div style={{fontSize:12,color:"#8a6a2a"}}>Stockpile resources to launch.</div>
+                    : <div style={{fontSize:12,color:"#4a6a8a"}}>Complete all 5 construction phases to ready the ship.</div>
+                }
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
 
       {newAch&&(
