@@ -136,23 +136,25 @@ Merge `dev` → `main` to trigger deployment.
 
 ---
 
+## Known Bugs
+
+_(No open bugs.)_
+
+---
+
 ## Backlog
 
 Features planned for future runs:
 
 ### Progression & Depth
-- **Soft Choices / Branching Upgrades** — upgrade trees with meaningful tradeoffs (e.g. double gold but halve click power), giving players a strategic identity
 - **Biomes** — each prestige destination planet has a unique biome (ice world, volcanic, gas giant moon, etc.) that modifies starting conditions, building costs, resource rates, and story flavor. Revealed on the launch screen before the new run begins.
 - **Leaderboard** — fastest Colony Ship launch times by planet, submitted anonymously. Gives the "race" in Space Base Race real meaning.
 - **Daily Challenge** — a fixed seed run with a specific planet and handicap condition, resetting every 24 hours. Shareable score at the end.
 - **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability.
 
 ### Feel & Polish
-- **Animated Building Icons** — small idle animations on buildings when they are producing (pulsing, spinning, etc.)
-- **Quieter XP Popups** — reduce the visual noise of floating "+N XP" popups: smaller size, lower opacity, shorter display duration, and a batching option that groups rapid gains into a single popup rather than stacking individually.
 
 ### Accessibility & Platform
-- **High Contrast Mode** — a toggleable high contrast theme that increases text/background contrast ratios, enlarges key UI elements, and removes decorative opacity effects to improve readability for visually impaired players. Toggle accessible from the header alongside existing audio controls.
 - **Mobile / Touchscreen Friendly** — responsive layout and touch-optimized controls so the game plays well on phones and tablets.
 - **Multi-language Translation** — localization support for major languages, making the game accessible to a global audience.
 
@@ -169,6 +171,21 @@ Features planned for future runs:
 ---
 
 ## Changelog
+
+### v0.9.1
+- ★ Soft Choices / Branching Upgrades — three exclusive upgrade pairs (one per layer); pick one, lock the other forever
+- ★ Animated Building Icons — idle animations on building cards when producing (spin, bounce, pulse, sway, float)
+- ★ High Contrast Mode — 👁 header toggle; white-on-black theme for accessibility; persists across sessions
+- Quieter XP Popups — smaller, lower opacity, shorter duration; rapid gains batch into one popup
+- Colony Ship phase costs ×100 — endgame now requires serious resource accumulation
+- Bug fix — passive production for non-clicked resources continued correctly while holding a click button
+- Bug fix — in-game Patch Notes now in sync with readme changelog
+
+### v0.9
+- ★ Phased Colony Ship construction — five sequential build phases replacing the single buy button
+- Phase 1 entry gates: tier-3 knowledge node, 2 of 3 Layer-3 upgrades, and building prereqs
+- Launch requires holding 10M of every resource after all 5 phases complete
+- Layer Skipper rank halves all phase costs
 
 ### v0.8
 - ★ Click Mastery upgrades — four new upgrades multiplying click power 2×, 5×, 10×, 20× (up to 2000× stacked); unlock by owning any tier-3 knowledge node

@@ -97,15 +97,36 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 }
 .layer-stars{position:absolute;inset:0;background:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 60%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 80%,#fff,transparent),radial-gradient(1px 1px at 85% 25%,#fff,transparent),radial-gradient(2px 2px at 15% 65%,#fff,transparent),radial-gradient(1px 1px at 55% 15%,#fff,transparent),radial-gradient(1.5px 1.5px at 90% 90%,#fff,transparent);opacity:0.6;}
 
+/* High Contrast Mode — .hc on body; !important overrides React inline styles */
+body.hc{background:#000!important;color:#fff!important;}
+body.hc div,body.hc section{background:#0a0a0a!important;border-color:#fff!important;box-shadow:none!important;}
+body.hc *{color:#fff!important;text-shadow:none!important;}
+body.hc button{background:#111!important;color:#fff!important;border:1px solid #fff!important;box-shadow:none!important;}
+body.hc button:disabled,body.hc button[disabled]{opacity:0.35!important;border-color:#888!important;color:#888!important;}
+body.hc input[type="range"]{accent-color:#fff!important;}
+body.hc input,body.hc textarea{background:#111!important;color:#fff!important;border-color:#fff!important;}
+body.hc .xp-popup{background:#000!important;border:1px solid #fff!important;border-left:3px solid #ffcc00!important;color:#ffcc00!important;}
+body.hc .xp-popup .xp-reason{color:#ccc!important;}
+/* SVG knowledge tree — invert fills since they use presentation attributes not CSS */
+body.hc svg{filter:invert(1) hue-rotate(180deg);}
+
+/* Building idle animations — only play when the building is producing (owned > 0) */
+@keyframes bldSpin   { 0%{transform:rotate(0deg)}   100%{transform:rotate(360deg)} }
+@keyframes bldBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+@keyframes bldPulse  { 0%,100%{transform:scale(1);opacity:0.85} 50%{transform:scale(1.2);opacity:1} }
+@keyframes bldSway   { 0%,100%{transform:rotate(-7deg)} 50%{transform:rotate(7deg)} }
+@keyframes bldFloat  { 0%,100%{transform:translateY(-2px)} 50%{transform:translateY(2px)} }
+.bld-icon{display:inline-block;font-size:15px;line-height:1;}
+
 /* XP popups */
-.xp-popup-stack{position:fixed;top:64px;right:8px;z-index:1500;display:flex;flex-direction:column;gap:4px;align-items:flex-end;pointer-events:none;}
-.xp-popup{background:#0a1a30dd;border:1px solid #6f9ec9;border-left:3px solid #e6a817;border-radius:6px;padding:5px 10px;color:#e6a817;font-weight:700;font-size:12px;white-space:nowrap;opacity:0;transform:translateX(60px);animation:xpFly 1.8s ease-out forwards;backdrop-filter:blur(4px);box-shadow:0 2px 12px #0008;}
-.xp-popup .xp-reason{color:#a0c4ff;font-weight:400;font-size:10px;margin-left:6px;}
+.xp-popup-stack{position:fixed;top:64px;right:8px;z-index:1500;display:flex;flex-direction:column;gap:3px;align-items:flex-end;pointer-events:none;}
+.xp-popup{background:#0a1a2acc;border:1px solid #4a6a8a;border-left:2px solid #e6a817;border-radius:4px;padding:3px 7px;color:#c8901a;font-weight:600;font-size:10px;white-space:nowrap;opacity:0;transform:translateX(40px);animation:xpFly 1.2s ease-out forwards;}
+.xp-popup .xp-reason{color:#7a9abf;font-weight:400;font-size:9px;margin-left:5px;}
 @keyframes xpFly{
-  0%   {opacity:0; transform:translateX(60px);}
-  15%  {opacity:1; transform:translateX(0);}
-  75%  {opacity:1; transform:translateX(0);}
-  100% {opacity:0; transform:translateX(-20px);}
+  0%   {opacity:0; transform:translateX(40px);}
+  15%  {opacity:0.7; transform:translateX(0);}
+  70%  {opacity:0.7; transform:translateX(0);}
+  100% {opacity:0; transform:translateX(-10px);}
 }
 </style>
 </head>
@@ -440,14 +461,15 @@ const BUILDINGS = {
   shipyard:    {id:"shipyard",    layer:3,name:"Shipyard",          res:"fuel",      base:800, prod:{fuel:3,minerals:1},                  tier:2,cost:{minerals:600,energy:400,fuel:300},desc:"Constructs deep space vessels frame by frame.",         multi:true, requires:{warplab:1, deepspaceantenna:1}},
   deepspaceantenna:{id:"deepspaceantenna",layer:3,name:"Deep Space Antenna",res:"research",base:700,prod:{research:4},tier:2,cost:{research:500,minerals:400},desc:"Reaches across light-years for faint signals.",        multi:true, requires:{probefactory:1}},
   // Colony Ship phases — one-time projects, not buildings. Live on the Launch tab.
+
   // Phases are gated linearly: phase 1 → phase 2 → ... → phase 5 → Launch button.
   // All v0.8.3 gates (building prereqs, knowReq tier-3) carry into phase 1 as well as
   // a new upgradeReq for "2 of u13, u14, u15."
-  cs_phase1: {id:"cs_phase1",  layer:3,name:"Hull Frame",       res:"minerals",  base:25000, prod:{},                                   tier:4,cost:{minerals:25000,energy:15000},                  desc:"The skeleton. Welded in vacuum.",                          multi:true, phase:true, phaseNum:1, requires:{shipyard:3, warplab:2, deepspaceantenna:2, probefactory:3}, knowReq:"tier3", upgradeReq:2},
-  cs_phase2: {id:"cs_phase2",  layer:3,name:"Engines",          res:"fuel",      base:25000, prod:{},                                   tier:4,cost:{fuel:25000,minerals:15000,research:5000},      desc:"Fusion reactors. Loud. Don't stand near them.",            multi:true, phase:true, phaseNum:2},
-  cs_phase3: {id:"cs_phase3",  layer:3,name:"Life Support",     res:"population",base:20000, prod:{},                                   tier:4,cost:{population:20000,research:15000,energy:10000}, desc:"Air, water, hydroponics, gravity rings.",                  multi:true, phase:true, phaseNum:3},
-  cs_phase4: {id:"cs_phase4",  layer:3,name:"Cargo & Cryo",     res:"population",base:20000, prod:{},                                   tier:4,cost:{population:20000,minerals:15000,fuel:10000},   desc:"Sleeping bays for 1,200 colonists plus Dave.",             multi:true, phase:true, phaseNum:4},
-  cs_phase5: {id:"cs_phase5",  layer:3,name:"Navigation Core",  res:"research",  base:30000, prod:{},                                   tier:4,cost:{research:30000,energy:10000,fuel:10000},       desc:"Charts the route. Dave's body. Probably.",                 multi:true, phase:true, phaseNum:5},
+  cs_phase1: {id:"cs_phase1",  layer:3,name:"Hull Frame",       res:"minerals",  base:25000, prod:{},                                   tier:4,cost:{minerals:2500000,energy:1500000},                  desc:"The skeleton. Welded in vacuum.",                          multi:true, phase:true, phaseNum:1, requires:{shipyard:3, warplab:2, deepspaceantenna:2, probefactory:3}, knowReq:"tier3", upgradeReq:2},
+  cs_phase2: {id:"cs_phase2",  layer:3,name:"Engines",          res:"fuel",      base:25000, prod:{},                                   tier:4,cost:{fuel:2500000,minerals:1500000,research:500000},      desc:"Fusion reactors. Loud. Don't stand near them.",            multi:true, phase:true, phaseNum:2},
+  cs_phase3: {id:"cs_phase3",  layer:3,name:"Life Support",     res:"population",base:20000, prod:{},                                   tier:4,cost:{population:2000000,research:1500000,energy:1000000}, desc:"Air, water, hydroponics, gravity rings.",                  multi:true, phase:true, phaseNum:3},
+  cs_phase4: {id:"cs_phase4",  layer:3,name:"Cargo & Cryo",     res:"population",base:20000, prod:{},                                   tier:4,cost:{population:2000000,minerals:1500000,fuel:1000000},   desc:"Sleeping bays for 1,200 colonists plus Dave.",             multi:true, phase:true, phaseNum:4},
+  cs_phase5: {id:"cs_phase5",  layer:3,name:"Navigation Core",  res:"research",  base:30000, prod:{},                                   tier:4,cost:{research:3000000,energy:1000000,fuel:1000000},       desc:"Charts the route. Dave's body. Probably.",                 multi:true, phase:true, phaseNum:5},
 };
 
 const UPGRADES = [
@@ -466,12 +488,41 @@ const UPGRADES = [
   {id:"u13",layer:3,name:"Warp Field Theory",  req:{research:800,fuel:500},                 cost:{research:800,fuel:500},                effect:"3x warp lab output",            tier:1},
   {id:"u14",layer:3,name:"Autonomous Probes",  req:{research:1000},                         cost:{research:1000,fuel:400},               effect:"3x probe factory output",       tier:1},
   {id:"u15",layer:3,name:"Starcore Drive",      req:{fuel:2000,energy:1000},                 cost:{fuel:2000,energy:1000,minerals:1000},  effect:"All fuel x2, colony ship -30%", tier:2},
+  // Branching upgrades — pick one per pair, the other is locked forever
+  {id:"ub1a",layer:1,name:"Overclock Protocol", req:{energy:2000,minerals:2000,research:1000}, cost:{energy:2000,minerals:2000,research:1000}, effect:"Passive prod ×2 — click power ×0.5",               tier:2, exclusive:["ub1b"], branchGroup:"g1"},
+  {id:"ub1b",layer:1,name:"Field Operator",     req:{energy:2000,minerals:2000,research:1000}, cost:{energy:2000,minerals:2000,research:1000}, effect:"Click power ×4 — passive prod ×0.7",               tier:2, exclusive:["ub1a"], branchGroup:"g1"},
+  {id:"ub2a",layer:2,name:"Fuel First",         req:{fuel:800,research:500,energy:500},        cost:{fuel:800,research:500,energy:500},         effect:"Fuel prod ×4 — other orbital ×0.6",               tier:2, exclusive:["ub2b"], branchGroup:"g2"},
+  {id:"ub2b",layer:2,name:"Steady Ascent",      req:{fuel:800,research:500,energy:500},        cost:{fuel:800,research:500,energy:500},         effect:"All orbital production ×2.5",                     tier:2, exclusive:["ub2a"], branchGroup:"g2"},
+  {id:"ub3a",layer:3,name:"Fast Launch",        req:{research:3000,fuel:2000,energy:1000},     cost:{research:3000,fuel:2000,energy:1000},      effect:"Ship phase costs −40% — legacy points ×0.5",     tier:2, exclusive:["ub3b"], branchGroup:"g3"},
+  {id:"ub3b",layer:3,name:"Grand Expedition",   req:{research:3000,fuel:2000,energy:1000},     cost:{research:3000,fuel:2000,energy:1000},      effect:"Ship phase costs +40% — legacy points ×3, prestige ×2", tier:2, exclusive:["ub3a"], branchGroup:"g3"},
   // Click Mastery upgrades — require any tier-3 knowledge node
   {id:"uc1",layer:3,name:"Click Mastery I",   req:{energy:5000,minerals:5000,research:5000,population:5000,fuel:5000},          cost:{energy:5000,minerals:5000,research:5000,population:5000,fuel:5000},          effect:"2x click power", tier:3, knowReq:"tier3"},
   {id:"uc2",layer:3,name:"Click Mastery II",  req:{energy:50000,minerals:50000,research:50000,population:50000,fuel:50000},     cost:{energy:50000,minerals:50000,research:50000,population:50000,fuel:50000},     effect:"5x click power (10x stacked)", tier:3, knowReq:"tier3"},
   {id:"uc3",layer:3,name:"Click Mastery III", req:{energy:500000,minerals:500000,research:500000,population:500000,fuel:500000},cost:{energy:500000,minerals:500000,research:500000,population:500000,fuel:500000},effect:"10x click power (100x stacked)", tier:3, knowReq:"tier3"},
   {id:"uc4",layer:3,name:"Click Mastery IV",  req:{energy:5000000,minerals:5000000,research:5000000,population:5000000,fuel:5000000},cost:{energy:5000000,minerals:5000000,research:5000000,population:5000000,fuel:5000000},effect:"20x click power (2000x stacked)", tier:3, knowReq:"tier3"},
 ];
+
+const BUILDING_ICONS = {
+  solar:            {icon:"☀️",  anim:"bldSpin",   dur:5},
+  drill:            {icon:"⛏️",  anim:"bldBounce", dur:1.2},
+  lab:              {icon:"🔬",  anim:"bldPulse",  dur:2.2},
+  habitat:          {icon:"🏠",  anim:"bldFloat",  dur:3},
+  refinery:         {icon:"🏭",  anim:"bldFloat",  dur:2.5},
+  medbay:           {icon:"🏥",  anim:"bldPulse",  dur:2},
+  greenhouse:       {icon:"🌱",  anim:"bldSway",   dur:3},
+  terraformer:      {icon:"🌍",  anim:"bldSpin",   dur:6},
+  launchpad:        {icon:"🚀",  anim:"bldBounce", dur:1.5},
+  orbitallab:       {icon:"🔭",  anim:"bldSpin",   dur:4},
+  solarcollector:   {icon:"🛰️", anim:"bldSpin",   dur:5},
+  oreprocessor:     {icon:"⚙️",  anim:"bldSpin",   dur:1.8},
+  cryobay:          {icon:"🧊",  anim:"bldPulse",  dur:3},
+  commandmodule:    {icon:"📡",  anim:"bldSway",   dur:4},
+  stationdock:      {icon:"🛸",  anim:"bldFloat",  dur:3.5},
+  probefactory:     {icon:"🛸",  anim:"bldBounce", dur:2},
+  warplab:          {icon:"⚡",  anim:"bldPulse",  dur:1.5},
+  shipyard:         {icon:"🔧",  anim:"bldSpin",   dur:2.5},
+  deepspaceantenna: {icon:"📡",  anim:"bldSway",   dur:3},
+};
 
 const KNOWLEDGE = [
   {id:"k0",   name:"Colonial Doctrine",    desc:"Someone read the manual.",               cost:{research:40},                          effect:"+15% all production",            branch:"center",    ring:0,angle:0,   requires:[],exclusive:[]},
@@ -594,7 +645,18 @@ const PLANETS = ["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc"
 const TIER3_KNOW = ["ke3","km3","kr3","kp3","kf3"];
 
 const PATCH_NOTES = [
-  {version:"v0.9", date:"Latest", changes:[
+  {version:"v0.9.1", date:"Latest", changes:[
+    "★ Soft Choices / Branching Upgrades — three exclusive upgrade pairs, one per layer. Pick one, the other is locked forever.",
+    "Layer 1: Overclock Protocol (passive ×2, clicks ×0.5) vs Field Operator (clicks ×4, passive ×0.7)",
+    "Layer 2: Fuel First (fuel ×4, other orbital ×0.6) vs Steady Ascent (all orbital ×2.5)",
+    "Layer 3: Fast Launch (ship phases −40%, LP ×0.5) vs Grand Expedition (ship phases +40%, LP ×3, prestige ×2)",
+    "★ Animated Building Icons — buildings show an idle animation when producing (spin, bounce, pulse, sway, float — varies by building)",
+    "★ High Contrast Mode — 👁 button in the header toggles a white-on-black high contrast theme; preference saves across sessions",
+    "Quieter XP Popups — smaller, lower opacity, shorter duration; rapid gains batch into a single popup instead of stacking",
+    "Colony Ship phase costs increased ×100 — the endgame now requires serious resource accumulation",
+    "Bug fix — passive production for non-clicked resources now continues correctly while holding a click button",
+  ]},
+  {version:"v0.9", date:"", changes:[
     "★ Phased Colony Ship construction — the single 'buy a ship' button is replaced by a five-phase build sequence",
     "Phase 1: Hull Frame (25K minerals, 15K energy)",
     "Phase 2: Engines (25K fuel, 15K minerals, 5K research)",
@@ -757,7 +819,14 @@ function BuildingCard({b, buildings, res, prod, canAfford, buildingCost, buyBuil
   return (
     <div style={{background:"#080d1a",border:"1px solid "+(canBuy?"#1e4a7f":"#0d1a2e"),borderRadius:6,padding:"6px 7px",opacity:canBuy||owned?1:0.5,display:"flex",flexDirection:"column",gap:3}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-        <span style={{fontSize:11,fontWeight:700,color:"#c8d8f0",lineHeight:1.3,flex:1}}>{layerIcon}{b.name}</span>
+        <span style={{fontSize:11,fontWeight:700,color:"#c8d8f0",lineHeight:1.3,flex:1}}>
+          {owned > 0 && BUILDING_ICONS[b.id] && (
+            <span className="bld-icon" style={{marginRight:4,animation:`${BUILDING_ICONS[b.id].anim} ${BUILDING_ICONS[b.id].dur}s ease-in-out infinite`}}>
+              {BUILDING_ICONS[b.id].icon}
+            </span>
+          )}
+          {layerIcon}{b.name}
+        </span>
         <span style={{fontSize:11,color:"#a0c4ff",fontWeight:700,marginLeft:4}}>x{owned}</span>
       </div>
       <div style={{fontSize:9,color:"#4a6a8a"}}>{b.desc.slice(0,55)+(b.desc.length>55?"...":"")}</div>
@@ -1073,6 +1142,7 @@ function App() {
   const [logModal,      setLogModal]      = useState(false);
   const [audioModal,    setAudioModal]    = useState(false);
   const [saveModal,     setSaveModal]     = useState(false);
+  const [hcMode,        setHcMode]        = useState(() => localStorage.getItem("sbr_hc") === "1");
   const [supportModal,  setSupportModal]  = useState(false);
   const [importText,    setImportText]    = useState("");
   const [saveStatus,    setSaveStatus]    = useState("");
@@ -1089,6 +1159,7 @@ function App() {
   const [branchesCompletedThisRun, setBranchesCompletedThisRun] = useState({}); // branchName -> true
   const xpClickCounter = useRef(0); // for The Intern's 25th-click skip
   const popupIdRef     = useRef(0);
+  const pendingXpRef   = useRef({amount: 0, reason: null, count: 0, timer: null});
   const ringIdRef = useRef(0);
   const prevLayerRef = useRef(layer);
   const holdRef   = useRef(null);
@@ -1106,23 +1177,32 @@ function App() {
   useEffect(() => { buildingsRef.current = buildings; }, [buildings]);
   useEffect(() => { resRef.current = res; }, [res]);
 
-  // Helper to award XP and spawn a floating popup
+  // Helper to award XP and spawn a floating popup.
+  // Rapid gains within 300ms are batched into a single popup to reduce visual noise.
   const awardXP = useCallback((amount, reason) => {
     if (!amount || amount <= 0) return;
-    // Rank XP multipliers
     const eq = XPStore.get().equippedRank;
     const eqRank = eq ? RANKS_BY_ID[eq] : null;
     let multiplier = 1;
     if (eqRank?.effect?.special === "stellar_council") multiplier *= 2;
     if (eqRank?.effect?.special === "atomic_scholar" && reason === "Knowledge unlocked") multiplier *= 2;
-    // XP gain decay: -8% per prestige, floor 0.3
     const decay = Math.max(0.30, Math.pow(0.92, prestige));
     const final = Math.max(1, Math.round(amount * multiplier * decay));
     XPStore.award(final, reason);
     setXpData(XPStore.get());
-    const id = ++popupIdRef.current;
-    setXpPopups(p => [...p, {id, amount: final, reason}]);
-    setTimeout(() => setXpPopups(p => p.filter(x=>x.id!==id)), 1800);
+    const p = pendingXpRef.current;
+    p.amount += final;
+    p.count += 1;
+    if (p.count === 1) p.reason = reason; else p.reason = null;
+    if (p.timer) clearTimeout(p.timer);
+    p.timer = setTimeout(() => {
+      const total = p.amount;
+      const label = p.reason;
+      p.amount = 0; p.count = 0; p.reason = null; p.timer = null;
+      const id = ++popupIdRef.current;
+      setXpPopups(prev => [...prev, {id, amount: total, reason: label}]);
+      setTimeout(() => setXpPopups(prev => prev.filter(x => x.id !== id)), 1200);
+    }, 300);
   }, [prestige]);
 
   // Daily streak check on first mount
@@ -1188,6 +1268,12 @@ function App() {
     prevLayerRef.current = layer;
   },[layer,awardXP]);
 
+  // Sync high contrast class on body and persist preference
+  useEffect(() => {
+    document.body.classList.toggle("hc", hcMode);
+    try { localStorage.setItem("sbr_hc", hcMode ? "1" : "0"); } catch(e) {}
+  }, [hcMode]);
+
   // Start ambient music after first interaction
   const ensureMusicStarted = useCallback(() => {
     AudioEngine.resume();
@@ -1213,6 +1299,7 @@ function App() {
     if(knowledge.includes("cx_em")&&(type==="energy"||type==="minerals"))b*=2;
     if(knowledge.includes("cx_rp")&&(type==="research"||type==="population"))b*=2;
     if(knowledge.includes("cx_pf2"))b*=4;
+    if(upgrades.includes("ub1a"))b*=0.5; if(upgrades.includes("ub1b"))b*=4;
     // Click Mastery upgrades
     if(upgrades.includes("uc1"))b*=2;
     if(upgrades.includes("uc2"))b*=5;
@@ -1241,6 +1328,10 @@ function App() {
       if(upgrades.includes("u6")&&["lab","habitat","medbay"].includes(bld.id))m*=1.5;
       if(upgrades.includes("u7"))m*=2;
       if(upgrades.includes("u8")&&bld.prod.fuel)m*=2; if(upgrades.includes("u9")&&bld.id==="orbitallab")m*=2;
+      if(upgrades.includes("ub1a"))m*=2; if(upgrades.includes("ub1b"))m*=0.7;
+      if(upgrades.includes("ub2a")&&bld.prod.fuel)m*=4;
+      if(upgrades.includes("ub2a")&&bld.layer===2&&!bld.prod.fuel)m*=0.6;
+      if(upgrades.includes("ub2b")&&bld.layer===2)m*=2.5;
       if(upgrades.includes("u10")&&bld.layer===2)m*=1.5; if(upgrades.includes("u11")&&bld.id==="oreprocessor")m*=3;
       if(upgrades.includes("u12")&&bld.id==="cryobay")m*=2; if(upgrades.includes("u13")&&bld.id==="warplab")m*=3;
       if(upgrades.includes("u14")&&bld.id==="probefactory")m*=3; if(upgrades.includes("u15")&&bld.prod.fuel)m*=2;
@@ -1303,7 +1394,7 @@ function App() {
       Object.keys(p).forEach(k=>{p[k] *= (1+echoBonus);});
     }
     return p;
-  },[buildings,upgrades,knowledge,prestigeBonus,rankEffect,elapsed,davesPause,res.minerals]);
+  },[buildings,upgrades,knowledge,prestigeBonus,rankEffect,elapsed,davesPause]);
 
   useEffect(()=>{
     if(paused) return;
@@ -1469,9 +1560,10 @@ function App() {
     const m=Math.pow(scaleBase, cnt);
     const disc=upgrades.includes("u15")&&b.id==="colonyship"?0.7:1;
     const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id==="terraformer"||b.id==="stationdock"||(b.phase===true))) ? 0.5 : 1;
+    const phaseMult = b.phase ? (upgrades.includes("ub3a") ? 0.6 : upgrades.includes("ub3b") ? 1.4 : 1) : 1;
     const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
-    if(b.cost){const c={};Object.entries(b.cost).forEach(([k,v])=>{c[k]=Math.floor(v*m*disc*rankMult);});return c;}
-    return{[b.res]:Math.floor(b.base*m*rankMult)};
+    if(b.cost){const c={};Object.entries(b.cost).forEach(([k,v])=>{c[k]=Math.floor(v*m*disc*phaseMult*rankMult);});return c;}
+    return{[b.res]:Math.floor(b.base*m*phaseMult*rankMult)};
   };
   const L3_UPGRADES = ["u13","u14","u15"]; // 3 main Layer-3 upgrades; phase 1 requires 2 of these
   const reqsMet = b => {
@@ -1500,10 +1592,11 @@ function App() {
     const m = Math.pow(scaleBase, cnt);
     const disc = upgrades.includes("u15") && b.id === "colonyship" ? 0.7 : 1;
     const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id === "terraformer" || b.id === "stationdock" || b.phase===true)) ? 0.5 : 1;
+    const phaseMult = b.phase ? (upgrades.includes("ub3a") ? 0.6 : upgrades.includes("ub3b") ? 1.4 : 1) : 1;
     const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
     const freshCost = b.cost
-      ? Object.fromEntries(Object.entries(b.cost).map(([k,v]) => [k, Math.floor(v*m*disc*rankMult)]))
-      : { [b.res]: Math.floor(b.base * m * rankMult) };
+      ? Object.fromEntries(Object.entries(b.cost).map(([k,v]) => [k, Math.floor(v*m*disc*phaseMult*rankMult)]))
+      : { [b.res]: Math.floor(b.base * m * phaseMult * rankMult) };
     const affordable = Object.entries(freshCost).every(([k,v]) => (resRef.current[k]||0) >= v);
     if (!affordable) return;
     // Deduct resources and update the mirror so the next hold tick sees fresh values
@@ -1559,6 +1652,7 @@ function App() {
     if(upgrades.includes(u.id)||!canAfford(u.cost)) return;
     if(!Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)) return;
     if(u.knowReq==="tier3" && !TIER3_KNOW.some(id=>knowledge.includes(id))) return;
+    if(u.exclusive && u.exclusive.some(ex=>upgrades.includes(ex))) return;
     setRes(r=>{const n={...r};Object.entries(u.cost).forEach(([k,v])=>{n[k]-=v;});return n;});
     setUpgrades(p=>[...p,u.id]);
     AudioEngine.play('achieve'); // upgrade chime reuses achieve tone
@@ -1596,7 +1690,9 @@ function App() {
   },[]);
 
   const doPrestige = () => {
-    const lp=Math.floor(elapsed/60)+knowledge.length*2+layer*10;
+    const lpMult = upgrades.includes("ub3a") ? 0.5 : upgrades.includes("ub3b") ? 3 : 1;
+    const prestigeMult = upgrades.includes("ub3b") ? 2 : 1.5;
+    const lp=Math.floor((Math.floor(elapsed/60)+knowledge.length*2+layer*10)*lpMult);
     // XP: 500 base, +100 if faster than personal best, mark planet visited
     awardXP(500, "Colony Ship launched!");
     const wasFaster = XPStore.setBest(elapsed);
@@ -1616,7 +1712,7 @@ function App() {
       }
     }
     setXpData(XPStore.get());
-    setPrestige(p=>p+1); setPrestigeBonus(b=>b*1.5); setLegacyPoints(prev=>prev+lp);
+    setPrestige(p=>p+1); setPrestigeBonus(b=>b*prestigeMult); setLegacyPoints(prev=>prev+lp);
     setCurrentPlanet(PLANETS[prestige%PLANETS.length]);
     // Apply rank starting resources, if any
     const startRes = rankEffect.startResources ? {...initRes(), ...rankEffect.startResources} : initRes();
@@ -2035,6 +2131,7 @@ function App() {
             <span>{FMT(xpData.xp)}</span>
             {activeRank&&<span style={{marginLeft:4,fontSize:13}} title={activeRank.name}>{activeRank.icon}</span>}
           </button>
+          <button onClick={()=>setHcMode(h=>!h)} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+(hcMode?"#fff":accent),borderRadius:6,color:hcMode?"#fff":"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Toggle high contrast mode">👁</button>
           <button onClick={()=>{AudioEngine.resume();setAudioModal(true);}} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Audio settings">{audioSettings.muted?"🔇":"🔊"}</button>
           <button onClick={()=>setSaveModal(true)} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Save / Load">💾</button>
           <button onClick={()=>setSupportModal(true)} style={{padding:"6px 10px",background:"#0d1a2e",border:"1px solid "+accent,borderRadius:6,color:"#a0c4ff",fontSize:13,cursor:"pointer",fontWeight:600}} title="Support & Patch Notes">ℹ️</button>
@@ -2177,39 +2274,61 @@ function App() {
         )}
 
         {tab==="upgrade"&&(()=>{
-          // Sort: affordable+req met → req met but unaffordable → req unmet → owned (last)
           const sorted = [...visUpgrades].sort((a,b)=>{
             const ao=upgrades.includes(a.id), bo=upgrades.includes(b.id);
-            if (ao!==bo) return ao?1:-1; // owned to bottom
+            if (ao!==bo) return ao?1:-1;
             const ar=Object.entries(a.req).every(([k,v])=>(totalRes[k]||0)>=v);
             const br=Object.entries(b.req).every(([k,v])=>(totalRes[k]||0)>=v);
-            if (ar!==br) return ar?-1:1; // unmet req to bottom
+            if (ar!==br) return ar?-1:1;
             const aa=canAfford(a.cost), ba=canAfford(b.cost);
-            if (aa!==ba) return aa?-1:1; // affordable first
+            if (aa!==ba) return aa?-1:1;
             return (a.layer||1)-(b.layer||1);
           });
+          // Render branching pairs as a unified choice card; track rendered groups
+          const renderedGroups = new Set();
+          const renderUpgrade = u => {
+            const owned=upgrades.includes(u.id),afford=canAfford(u.cost);
+            const req=Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v);
+            const blocked=u.exclusive&&u.exclusive.some(ex=>upgrades.includes(ex));
+            const wait=(!owned&&!blocked&&req&&!afford)?timeToAfford(res,prod,u.cost):null;
+            const primaryRes=Object.keys(u.cost)[0]||Object.keys(u.req)[0]||"energy";
+            const accent=RES[primaryRes].color;
+            const clickable=!owned&&!blocked&&req;
+            return(
+              <div key={u.id} onClick={()=>clickable&&buyUpgrade(u)} style={{background:owned?"#0a1a0a":blocked?"#0d0d0d":"#080d1a",border:"1px solid "+(owned?"#2a5a2a":blocked?"#1a1a1a":afford&&req?accent+"99":req?"#1e3a5f":"#0d1a2e"),borderRadius:6,padding:"7px 8px",opacity:owned?0.75:blocked?0.3:req?1:0.45,cursor:clickable?"pointer":"default",display:"flex",flexDirection:"column",gap:3,borderLeft:"3px solid "+(owned?"#2a5a2a":blocked?"#333":accent)}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:owned?"#6fcf97":blocked?"#555":"#c8d8f0",flex:1,lineHeight:1.25}}>{u.knowReq==="tier3"?"👆 ":u.layer===3?"🌌 ":u.layer===2?"🛸 ":""}{u.name}</span>
+                  {owned&&<span style={{color:"#6fcf97",fontSize:12,flexShrink:0}}>✓</span>}
+                  {blocked&&<span style={{color:"#555",fontSize:12,flexShrink:0}}>✗</span>}
+                </div>
+                <div style={{fontSize:9,color:blocked?"#444":"#4a7a9a",lineHeight:1.35}}>{u.effect}</div>
+                {!req&&!owned&&!blocked&&<div style={{fontSize:9,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v])=>FMT(v)+RES[k].icon).join(" + ")}</div>}
+                {req&&!owned&&!blocked&&<div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}</div>}
+                {wait!==null&&isFinite(wait)&&<div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+              </div>
+            );
+          };
           return(
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:6}}>
-              {sorted.map(u=>{
-                const owned=upgrades.includes(u.id),afford=canAfford(u.cost);
-                const req=Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v);
-                const wait=(!owned&&req&&!afford)?timeToAfford(res,prod,u.cost):null;
-                // primary resource = first cost key, used for accent color
-                const primaryRes = Object.keys(u.cost)[0] || Object.keys(u.req)[0] || "energy";
-                const accent = RES[primaryRes].color;
-                return(
-                  <div key={u.id} onClick={()=>buyUpgrade(u)} style={{background:owned?"#0a1a0a":"#080d1a",border:"1px solid "+(owned?"#2a5a2a":afford&&req?accent+"99":req?"#1e3a5f":"#0d1a2e"),borderRadius:6,padding:"7px 8px",opacity:owned?0.75:req?1:0.45,cursor:!owned&&req?"pointer":"default",display:"flex",flexDirection:"column",gap:3,borderLeft:"3px solid "+(owned?"#2a5a2a":accent)}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:4}}>
-                      <span style={{fontSize:11,fontWeight:700,color:owned?"#6fcf97":"#c8d8f0",flex:1,lineHeight:1.25}}>{u.knowReq==="tier3"?"👆 ":u.layer===3?"🌌 ":u.layer===2?"🛸 ":""}{u.name}</span>
-                      {owned&&<span style={{color:"#6fcf97",fontSize:12,flexShrink:0}}>✓</span>}
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {sorted.reduce((acc,u)=>{
+                if(u.branchGroup){
+                  if(renderedGroups.has(u.branchGroup)) return acc;
+                  renderedGroups.add(u.branchGroup);
+                  const pair=sorted.filter(x=>x.branchGroup===u.branchGroup);
+                  const anyOwned=pair.some(x=>upgrades.includes(x.id));
+                  acc.push(
+                    <div key={"bg_"+u.branchGroup} style={{border:"1px solid #2a3a5a",borderRadius:8,padding:"6px 8px",background:"#060c18"}}>
+                      {!anyOwned&&<div style={{fontSize:9,fontWeight:700,color:"#e6a817",marginBottom:5,letterSpacing:1}}>⚡ CHOOSE ONE</div>}
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                        {pair.map(pu=>renderUpgrade(pu))}
+                      </div>
                     </div>
-                    <div style={{fontSize:9,color:"#4a7a9a",lineHeight:1.35}}>{u.effect}</div>
-                    {!req&&!owned&&<div style={{fontSize:9,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v])=>FMT(v)+RES[k].icon).join(" + ")}</div>}
-                    {req&&!owned&&<div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}</div>}
-                    {wait!==null&&isFinite(wait)&&<div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
-                  </div>
-                );
-              })}
+                  );
+                } else {
+                  acc.push(<div key={u.id} style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:6}}>{renderUpgrade(u)}</div>);
+                }
+                return acc;
+              },[])}
             </div>
           );
         })()}
