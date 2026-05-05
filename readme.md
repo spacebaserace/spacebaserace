@@ -136,6 +136,12 @@ Merge `dev` → `main` to trigger deployment.
 
 ---
 
+## Known Bugs
+
+- **Hold-to-Generate blocks passive production (early game)** — holding a resource click button to generate that resource pauses passive production for all other resources. Only noticeable in early game before buildings generate enough to mask it. Root cause: the hold timer loop likely blocks the production tick.
+
+---
+
 ## Backlog
 
 Features planned for future runs:
