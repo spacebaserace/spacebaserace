@@ -1096,11 +1096,15 @@ function App() {
   // buildingsRef mirrors `buildings` synchronously so hold-burst handlers can read fresh counts
   // without waiting for re-render. Updated in a useEffect below.
   const buildingsRef = useRef(buildings);
+  // resRef mirrors `res` synchronously for the same reason — React 18 batches setRes updaters
+  // asynchronously, so didBuy flags set inside them aren't visible on the same tick.
+  const resRef = useRef({});
   // Dave's Cousin: id of currently broken building (or null)
   const [davesPause,    setDavesPause]    = useState(null); // {id, until}
 
-  // Keep buildingsRef in sync with buildings state
+  // Keep buildingsRef and resRef in sync with state
   useEffect(() => { buildingsRef.current = buildings; }, [buildings]);
+  useEffect(() => { resRef.current = res; }, [res]);
 
   // Helper to award XP and spawn a floating popup
   const awardXP = useCallback((amount, reason) => {
@@ -1486,44 +1490,38 @@ function App() {
     return buildOk && knowOk && upgOk && phaseOk;
   };
   const buyBuilding = b => {
-    // Hold-repeat invokes this on a setInterval. We need fresh state on every tick because
-    // the closure goes stale. We read buildings via buildingsRef (mirror) and check resources
-    // inside setRes's functional updater. The building bump and ref update happen atomically
-    // in setBuildings so the next tick sees the post-buy count.
+    // Hold-repeat invokes this on a setInterval so closures go stale.
+    // Use buildingsRef for fresh building counts and resRef for fresh resource values —
+    // both mirrors are kept in sync via useEffect. Check affordability synchronously
+    // before calling any setters so we never deduct resources without adding the building.
     if (!reqsMet(b)) { AudioEngine.play('error'); return; }
-    let didBuy = false;
-    let costPaid = null;
+    const cnt = buildingsRef.current[b.id] || 0;
+    const scaleBase = rankEffect.special === "industrialist" ? 1.13 : 1.08;
+    const m = Math.pow(scaleBase, cnt);
+    const disc = upgrades.includes("u15") && b.id === "colonyship" ? 0.7 : 1;
+    const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id === "terraformer" || b.id === "stationdock" || b.phase===true)) ? 0.5 : 1;
+    const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
+    const freshCost = b.cost
+      ? Object.fromEntries(Object.entries(b.cost).map(([k,v]) => [k, Math.floor(v*m*disc*rankMult)]))
+      : { [b.res]: Math.floor(b.base * m * rankMult) };
+    const affordable = Object.entries(freshCost).every(([k,v]) => (resRef.current[k]||0) >= v);
+    if (!affordable) return;
+    // Deduct resources and update the mirror so the next hold tick sees fresh values
     setRes(prevR => {
-      // Read FRESH building count from ref (always in sync with React state via setBuildings updater below)
-      const cnt = buildingsRef.current[b.id] || 0;
-      // Recompute cost using fresh count
-      const scaleBase = rankEffect.special === "industrialist" ? 1.13 : 1.08;
-      const m = Math.pow(scaleBase, cnt);
-      const disc = upgrades.includes("u15") && b.id === "colonyship" ? 0.7 : 1;
-      const layerSkipDisc = (rankEffect.special === "layer_skip" && (b.id === "terraformer" || b.id === "stationdock" || b.phase===true)) ? 0.5 : 1;
-      const rankMult = (rankEffect.buildingCostMult || 1) * layerSkipDisc;
-      const freshCost = b.cost
-        ? Object.fromEntries(Object.entries(b.cost).map(([k,v]) => [k, Math.floor(v*m*disc*rankMult)]))
-        : { [b.res]: Math.floor(b.base * m * rankMult) };
-      const affordable = Object.entries(freshCost).every(([k,v]) => (prevR[k]||0) >= v);
-      if (!affordable) return prevR;
-      didBuy = true;
-      costPaid = freshCost;
       const n = {...prevR};
       Object.entries(freshCost).forEach(([k,v]) => { n[k] -= v; });
+      resRef.current = n;
       return n;
     });
-    if (didBuy) {
-      // Update buildings AND the synchronized ref atomically
-      setBuildings(prevB => {
-        const nb = {...prevB, [b.id]: (prevB[b.id]||0) + 1};
-        buildingsRef.current = nb; // keep ref fresh for the next interval tick
-        return nb;
-      });
-      AudioEngine.play('buy');
-      awardXP(1, "Building");
-      if (XPStore.markFirst("buildings", b.id)) awardXP(25, "First "+b.name+"!");
-    }
+    // Increment building count and keep ref in sync
+    setBuildings(prevB => {
+      const nb = {...prevB, [b.id]: (prevB[b.id]||0) + 1};
+      buildingsRef.current = nb;
+      return nb;
+    });
+    AudioEngine.play('buy');
+    awardXP(1, "Building");
+    if (XPStore.markFirst("buildings", b.id)) awardXP(25, "First "+b.name+"!");
   };
   const sellBuilding = b => {
     let didSell = false;
