@@ -149,6 +149,7 @@ Features planned for future runs:
 
 ### Feel & Polish
 - **Animated Building Icons** — small idle animations on buildings when they are producing (pulsing, spinning, etc.)
+- **Quieter XP Popups** — reduce the visual noise of floating "+N XP" popups: smaller size, lower opacity, shorter display duration, and a batching option that groups rapid gains into a single popup rather than stacking individually.
 
 ### Accessibility & Platform
 - **High Contrast Mode** — a toggleable high contrast theme that increases text/background contrast ratios, enlarges key UI elements, and removes decorative opacity effects to improve readability for visually impaired players. Toggle accessible from the header alongside existing audio controls.
