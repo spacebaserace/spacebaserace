@@ -151,6 +151,7 @@ Features planned for future runs:
 - **Animated Building Icons** — small idle animations on buildings when they are producing (pulsing, spinning, etc.)
 
 ### Accessibility & Platform
+- **High Contrast Mode** — a toggleable high contrast theme that increases text/background contrast ratios, enlarges key UI elements, and removes decorative opacity effects to improve readability for visually impaired players. Toggle accessible from the header alongside existing audio controls.
 - **Mobile / Touchscreen Friendly** — responsive layout and touch-optimized controls so the game plays well on phones and tablets.
 - **Multi-language Translation** — localization support for major languages, making the game accessible to a global audience.
 
