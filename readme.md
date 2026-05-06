@@ -147,13 +147,19 @@ _(No open bugs.)_
 Features planned for future runs:
 
 ### Progression & Depth
+- **Early Game Pacing / Grind Pass** — reduce starting resource rates and steepen the early building cost curve so the first 10 minutes feel like a real struggle before momentum kicks in. Add a small "first resource milestone" story beat to reward the grind. The goal is player investment, not frustration — tune so each unlock feels earned.
+- **Bulk Buy (×10 / ×100)** — add buy-quantity toggles on building cards so mid/late-game players can scale up quickly without holding a button. Pairs well with tighter early-game pacing.
+- **Run Summary Screen** — a full-screen results card on Colony Ship launch showing run time, buildings owned, knowledge unlocked, Legacy Points earned, and personal-best comparison. Makes each prestige feel like an event.
+- **Statistics / Run History** — a tab (or modal behind a header button) showing all-time stats: total launches, fastest run, total resources generated, total XP earned, buildings bought. Rewards long-term play and gives returning players a sense of progress.
 - **Biomes** — each prestige destination planet has a unique biome (ice world, volcanic, gas giant moon, etc.) that modifies starting conditions, building costs, resource rates, and story flavor. Revealed on the launch screen before the new run begins.
 - **Leaderboard** — fastest Colony Ship launch times by planet, submitted anonymously. Gives the "race" in Space Base Race real meaning.
 - **Daily Challenge** — a fixed seed run with a specific planet and handicap condition, resetting every 24 hours. Shareable score at the end.
-- **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability.
+- **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability. *Depends on Story Enhancement — complete story arcs and effects before this.*
 
 ### Feel & Polish
 - **Version Number in Support Menu** — display the current version number (e.g. "v0.9.1") in the support/patch notes modal so players always know what build they're on.
+- **Onboarding / First-Run Tutorial** — a lightweight tooltip sequence for brand-new players: highlight the first click button, explain resources, nudge toward the first building. Skippable, never shown again after run 1. Critical for itch.io discoverability where players have no context.
+- **Keyboard Shortcuts** — number keys (1–5) to trigger resource clicks, hotkeys to switch tabs. Low-effort, high-reward for power users.
 
 ### Accessibility & Platform
 - **Mobile / Touchscreen Friendly** — responsive layout and touch-optimized controls so the game plays well on phones and tablets.
@@ -163,11 +169,12 @@ Features planned for future runs:
 - **Referral / Share Link** — one-click share that opens itch.io, for word-of-mouth growth.
 
 ### Story & World
-- **Environmental Storylines** — planet-specific story arcs driven by the environment itself: weather events on a frozen world, volcanic eruptions on a magma planet, atmospheric storms on a gas giant moon, tidal cycles on an ocean world. Each biome (see Biomes backlog item) gets 3-5 unique environmental events that fire across a run, building a sense of place beyond just stat modifiers.
+- **Story Enhancement Pass** *(priority — complete before NG+ Modifiers)* — audit and expand all existing story beats across all three layers. More ticker events, better pacing, and ensure every major milestone has a narrative moment. This is the foundation for Story Effects and Environmental Storylines.
 - **Story Effects on Gameplay** — story events should have real mechanical consequences, not just flavor text. A solar flare temporarily doubles energy production. An antimatter incident locks one upgrade for 60 seconds. The Dave Upload event grants a permanent +5% all production. Discovery of strange ore unlocks a new building. Ties the narrative directly to the simulation and rewards players for paying attention to story beats.
-- **Textbook / Codex** — a reference tab with full lore definitions for every building, upgrade, and knowledge node, with extra story depth.
+- **Environmental Storylines** — planet-specific story arcs driven by the environment itself: weather events on a frozen world, volcanic eruptions on a magma planet, atmospheric storms on a gas giant moon, tidal cycles on an ocean world. Each biome (see Biomes backlog item) gets 3-5 unique environmental events that fire across a run, building a sense of place beyond just stat modifiers.
 - **Dave Lore Arc** — a dedicated Dave storyline that evolves across prestige runs, building toward a reveal about what Dave actually is.
 - **Alien Signal Storyline** — the signal detected in the first story event develops across layers into a full mystery arc.
+- **Textbook / Codex** — a reference tab with full lore definitions for every building, upgrade, and knowledge node, with extra story depth.
 
 ---
 
