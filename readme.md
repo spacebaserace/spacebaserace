@@ -149,7 +149,6 @@ Features planned for future runs:
 ### Progression & Depth
 - **Bulk Buy (×10 / ×100)** — add buy-quantity toggles on building cards so mid/late-game players can scale up quickly without holding a button. Pairs well with tighter early-game pacing.
 - **Construction Timer** — first build of any building type requires a timed construction phase (you're a person; only one thing at a time). Subsequent purchases of the same type are instant. Resources deducted immediately, building added on completion. Visual progress bar on the card.
-- **Biomes** — each prestige destination planet has a unique biome (ice world, volcanic, gas giant moon, etc.) that modifies starting conditions, building costs, resource rates, and story flavor. Revealed on the launch screen before the new run begins.
 - **Leaderboard** — fastest Colony Ship launch times by planet, submitted anonymously. Gives the "race" in Space Base Race real meaning.
 - **Daily Challenge** — a fixed seed run with a specific planet and handicap condition, resetting every 24 hours. Shareable score at the end.
 - **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability. *Depends on Story Enhancement — complete story arcs and effects before this.*
@@ -163,13 +162,12 @@ Features planned for future runs:
 - **Multi-language Translation** — localization support for major languages, making the game accessible to a global audience.
 
 ### Meta & Community
+- **User Registration** — account system so players can save progress server-side, appear on leaderboards, and carry stats across devices. Foundation for Daily Challenge, Leaderboard, and social features.
 - **Referral / Share Link** — one-click share that opens itch.io, for word-of-mouth growth.
 
 ### Story & World
 - **Story Effects on Gameplay** — story events should trigger real mechanical effects: a solar flare temporarily doubles energy, antimatter incident locks an upgrade for 60 seconds, Dave's calculations award a fuel bonus. Ties narrative to simulation and rewards players paying attention.
-- **Story Effects on Gameplay** — story events should have real mechanical consequences, not just flavor text. A solar flare temporarily doubles energy production. An antimatter incident locks one upgrade for 60 seconds. The Dave Upload event grants a permanent +5% all production. Discovery of strange ore unlocks a new building. Ties the narrative directly to the simulation and rewards players for paying attention to story beats.
-- **Environmental Storylines** — planet-specific story arcs driven by the environment itself: weather events on a frozen world, volcanic eruptions on a magma planet, atmospheric storms on a gas giant moon, tidal cycles on an ocean world. Each biome (see Biomes backlog item) gets 3-5 unique environmental events that fire across a run, building a sense of place beyond just stat modifiers.
-- **Dave Lore Arc** — a dedicated Dave storyline that evolves across prestige runs, building toward a reveal about what Dave actually is.
+- **Environmental Storylines** — planet-specific story arcs driven by the environment itself: weather events on a frozen world, volcanic eruptions on a magma planet, atmospheric storms on a gas giant moon, tidal cycles on an ocean world. Each biome gets 3–5 unique environmental events that fire across a run, building a sense of place beyond just stat modifiers.
 - **Alien Signal Storyline** — the signal detected in the first story event develops across layers into a full mystery arc.
 - **Textbook / Codex** — a reference tab with full lore definitions for every building, upgrade, and knowledge node, with extra story depth.
 
