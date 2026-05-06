@@ -147,17 +147,14 @@ _(No open bugs.)_
 Features planned for future runs:
 
 ### Progression & Depth
-- **Early Game Pacing / Grind Pass** — reduce starting resource rates and steepen the early building cost curve so the first 10 minutes feel like a real struggle before momentum kicks in. Add a small "first resource milestone" story beat to reward the grind. The goal is player investment, not frustration — tune so each unlock feels earned.
 - **Bulk Buy (×10 / ×100)** — add buy-quantity toggles on building cards so mid/late-game players can scale up quickly without holding a button. Pairs well with tighter early-game pacing.
-- **Run Summary Screen** — a full-screen results card on Colony Ship launch showing run time, buildings owned, knowledge unlocked, Legacy Points earned, and personal-best comparison. Makes each prestige feel like an event.
-- **Statistics / Run History** — a tab (or modal behind a header button) showing all-time stats: total launches, fastest run, total resources generated, total XP earned, buildings bought. Rewards long-term play and gives returning players a sense of progress.
+- **Construction Timer** — first build of any building type requires a timed construction phase (you're a person; only one thing at a time). Subsequent purchases of the same type are instant. Resources deducted immediately, building added on completion. Visual progress bar on the card.
 - **Biomes** — each prestige destination planet has a unique biome (ice world, volcanic, gas giant moon, etc.) that modifies starting conditions, building costs, resource rates, and story flavor. Revealed on the launch screen before the new run begins.
 - **Leaderboard** — fastest Colony Ship launch times by planet, submitted anonymously. Gives the "race" in Space Base Race real meaning.
 - **Daily Challenge** — a fixed seed run with a specific planet and handicap condition, resetting every 24 hours. Shareable score at the end.
 - **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability. *Depends on Story Enhancement — complete story arcs and effects before this.*
 
 ### Feel & Polish
-- **Version Number in Support Menu** — display the current version number (e.g. "v0.9.1") in the support/patch notes modal so players always know what build they're on.
 - **Onboarding / First-Run Tutorial** — a lightweight tooltip sequence for brand-new players: highlight the first click button, explain resources, nudge toward the first building. Skippable, never shown again after run 1. Critical for itch.io discoverability where players have no context.
 - **Keyboard Shortcuts** — number keys (1–5) to trigger resource clicks, hotkeys to switch tabs. Low-effort, high-reward for power users.
 
@@ -170,6 +167,7 @@ Features planned for future runs:
 
 ### Story & World
 - **Story Enhancement Pass** *(priority — complete before NG+ Modifiers)* — audit and expand all existing story beats across all three layers. More ticker events, better pacing, and ensure every major milestone has a narrative moment. This is the foundation for Story Effects and Environmental Storylines.
+- **Dave Lore Enhancement** — expand Dave's presence across all story events: more Dave-specific comms chatter, a multi-run arc that builds toward a reveal, and tie the Dave secret rank to unlocking deeper story layers. Dave is the heart of the game's humour and deserves a full arc.
 - **Story Effects on Gameplay** — story events should have real mechanical consequences, not just flavor text. A solar flare temporarily doubles energy production. An antimatter incident locks one upgrade for 60 seconds. The Dave Upload event grants a permanent +5% all production. Discovery of strange ore unlocks a new building. Ties the narrative directly to the simulation and rewards players for paying attention to story beats.
 - **Environmental Storylines** — planet-specific story arcs driven by the environment itself: weather events on a frozen world, volcanic eruptions on a magma planet, atmospheric storms on a gas giant moon, tidal cycles on an ocean world. Each biome (see Biomes backlog item) gets 3-5 unique environmental events that fire across a run, building a sense of place beyond just stat modifiers.
 - **Dave Lore Arc** — a dedicated Dave storyline that evolves across prestige runs, building toward a reveal about what Dave actually is.
@@ -179,6 +177,15 @@ Features planned for future runs:
 ---
 
 ## Changelog
+
+### v1.0
+- ★ Two new buildings: Quarry (minerals tier 2, requires 5× Drill Rigs) and Nursery (population tier 2, requires 5× Habitat Domes)
+- ★ Stats Tab — new tab showing this-run stats (time, clicks, buildings, knowledge, upgrades, resources) and all-time stats (launches, total XP, personal best, planets visited, ranks owned, daily streak)
+- ★ Run Summary Screen — full-screen modal on Colony Ship launch showing run time, legacy points, clicks, buildings, knowledge nodes, and personal best flag; dismiss to embark
+- Two-row tab bar — tabs split across two rows (Build / Upgrade / Knowledge / Achievements on top; Ranks / Stats / Launch on bottom), more breathing room at all screen sizes
+- Early game pacing — tier-1 building production reduced from 0.5/s to 0.3/s; base cost raised from 12 to 18; first few buildings require more investment
+- Version number shown in Support & Patch Notes modal header
+- Bug fix — upgrade tab badge no longer counts exclusive upgrades that are blocked by a purchased sibling choice
 
 ### v0.9.1
 - ★ Soft Choices / Branching Upgrades — three exclusive upgrade pairs (one per layer); pick one, lock the other forever

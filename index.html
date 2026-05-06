@@ -441,10 +441,12 @@ const RES = {
 };
 
 const BUILDINGS = {
-  solar:       {id:"solar",       layer:1,name:"Solar Array",       res:"energy",    base:12,  prod:{energy:0.5},                         tier:1,desc:"Photovoltaic arrays soaking up twin-star radiation.",      multi:false},
-  drill:       {id:"drill",       layer:1,name:"Drill Rig",         res:"minerals",  base:12,  prod:{minerals:0.5},                       tier:1,desc:"Bores deep into the crust for raw ore.",                   multi:false},
-  lab:         {id:"lab",         layer:1,name:"Research Lab",      res:"research",  base:12,  prod:{research:0.5},                       tier:1,desc:"Staffed 24/7 by slightly caffeinated scientists.",         multi:false},
-  habitat:     {id:"habitat",     layer:1,name:"Habitat Dome",      res:"population",base:12,  prod:{population:0.5},                     tier:1,desc:"Pressurized living quarters for colonists.",               multi:false},
+  solar:       {id:"solar",       layer:1,name:"Solar Array",       res:"energy",    base:18,  prod:{energy:0.3},                         tier:1,desc:"Photovoltaic arrays soaking up twin-star radiation.",      multi:false},
+  drill:       {id:"drill",       layer:1,name:"Drill Rig",         res:"minerals",  base:18,  prod:{minerals:0.3},                       tier:1,desc:"Bores deep into the crust for raw ore.",                   multi:false},
+  lab:         {id:"lab",         layer:1,name:"Research Lab",      res:"research",  base:18,  prod:{research:0.3},                       tier:1,desc:"Staffed 24/7 by slightly caffeinated scientists.",         multi:false},
+  habitat:     {id:"habitat",     layer:1,name:"Habitat Dome",      res:"population",base:18,  prod:{population:0.3},                     tier:1,desc:"Pressurized living quarters for colonists.",               multi:false},
+  quarry:      {id:"quarry",      layer:1,name:"Quarry",            res:"minerals",  base:80,  prod:{minerals:2},                         tier:2,cost:{minerals:80,energy:50},        desc:"Open-pit excavation. More blast, less precision.",               multi:false, requires:{drill:5}},
+  nursery:     {id:"nursery",     layer:1,name:"Nursery",           res:"population",base:80,  prod:{population:2},                       tier:2,cost:{population:80,energy:50},      desc:"Dedicated colonist nursery. Dave is supervised.",                multi:false, requires:{habitat:5}},
   refinery:    {id:"refinery",    layer:1,name:"Refinery",          res:"energy",    base:120, prod:{energy:3,minerals:2},                tier:2,cost:{energy:80,minerals:80},       desc:"Plasma-smelts ore into usable energy.",                   multi:true, requires:{drill:5}},
   medbay:      {id:"medbay",      layer:1,name:"Med Bay",           res:"population",base:150, prod:{research:2,population:3},            tier:2,cost:{research:100,population:100}, desc:"Heals colonists and generates medical data.",             multi:true, requires:{habitat:5, lab:2}},
   greenhouse:  {id:"greenhouse",  layer:1,name:"Greenhouse",        res:"population",base:200, prod:{population:1,research:0.5},          tier:2,cost:{energy:120,population:80},    desc:"Hydroponic farms sustaining colony growth.",              multi:true, requires:{habitat:3}},
@@ -522,6 +524,8 @@ const BUILDING_ICONS = {
   warplab:          {icon:"⚡",  anim:"bldPulse",  dur:1.5},
   shipyard:         {icon:"🔧",  anim:"bldSpin",   dur:2.5},
   deepspaceantenna: {icon:"📡",  anim:"bldSway",   dur:3},
+  quarry:           {icon:"⛰️", anim:"bldBounce", dur:2},
+  nursery:          {icon:"👶",  anim:"bldFloat",  dur:3.5},
 };
 
 const KNOWLEDGE = [
@@ -645,7 +649,16 @@ const PLANETS = ["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc"
 const TIER3_KNOW = ["ke3","km3","kr3","kp3","kf3"];
 
 const PATCH_NOTES = [
-  {version:"v0.9.1", date:"Latest", changes:[
+  {version:"v1.0", date:"Latest", changes:[
+    "★ Two new buildings: Quarry (minerals tier 2, requires 5× Drill Rigs) and Nursery (population tier 2, requires 5× Habitat Domes)",
+    "★ Stats Tab — this-run stats (time, clicks, buildings, knowledge, upgrades, resources) and all-time stats (launches, total XP, personal best, planets visited, ranks)",
+    "★ Run Summary Screen — full-screen results card on Colony Ship launch before embarking to new planet",
+    "Two-row tab bar — more breathing room, no more squished tab labels",
+    "Early game pacing — tier-1 buildings produce less and cost more; first colony takes longer to establish",
+    "Version number shown in Support modal header",
+    "Bug fix — upgrade badge no longer counts blocked exclusive upgrade choices",
+  ]},
+  {version:"v0.9.1", date:"", changes:[
     "★ Soft Choices / Branching Upgrades — three exclusive upgrade pairs, one per layer. Pick one, the other is locked forever.",
     "Layer 1: Overclock Protocol (passive ×2, clicks ×0.5) vs Field Operator (clicks ×4, passive ×0.7)",
     "Layer 2: Fuel First (fuel ×4, other orbital ×0.6) vs Steady Ascent (all orbital ×2.5)",
@@ -1172,6 +1185,7 @@ function App() {
   const resRef = useRef({});
   // Dave's Cousin: id of currently broken building (or null)
   const [davesPause,    setDavesPause]    = useState(null); // {id, until}
+  const [runSummary,    setRunSummary]    = useState(null); // shown on prestige launch
 
   // Keep buildingsRef and resRef in sync with state
   useEffect(() => { buildingsRef.current = buildings; }, [buildings]);
@@ -1712,6 +1726,18 @@ function App() {
       }
     }
     setXpData(XPStore.get());
+    // Capture run summary before resetting
+    setRunSummary({
+      time: elapsed,
+      planet: currentPlanet,
+      nextPlanet: PLANETS[(prestige+1)%PLANETS.length],
+      knowledgeCount: knowledge.length,
+      totalBuildings: Object.values(buildings).reduce((a,v)=>a+v,0),
+      upgradesCount: upgrades.length,
+      lp,
+      totalClicks,
+      newBest: wasFaster !== null && wasFaster > 0,
+    });
     setPrestige(p=>p+1); setPrestigeBonus(b=>b*prestigeMult); setLegacyPoints(prev=>prev+lp);
     setCurrentPlanet(PLANETS[prestige%PLANETS.length]);
     // Apply rank starting resources, if any
@@ -1901,7 +1927,7 @@ function App() {
   const visUpgrades   = UPGRADES.filter(u=>u.layer<=layer && (u.knowReq!=="tier3" || tier3Owned));
 
   // badge counts
-  const upgradeBadge  = visUpgrades.filter(u=>!upgrades.includes(u.id)&&Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)&&canAfford(u.cost)).length;
+  const upgradeBadge  = visUpgrades.filter(u=>!upgrades.includes(u.id)&&!(u.exclusive&&u.exclusive.some(ex=>upgrades.includes(ex)))&&Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)&&canAfford(u.cost)).length;
   const knowledgeBadge= KNOWLEDGE.filter(k=>!knowledge.includes(k.id)&&k.requires.every(r=>knowledge.includes(r))&&canAffordWith(res,k.cost)&&!(k.exclusive&&k.exclusive.some(ex=>knowledge.includes(ex)))).length;
   const achieveBadge  = ACHIEVEMENTS.filter(a=>!achievements.includes(a.id)&&a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer)).length;
   // Ranks badge: new ranks (visible/unlocked, not owned) that the player can afford right now
@@ -1918,7 +1944,8 @@ function App() {
     }).length;
   })();
 
-  const TABS = ["build","upgrade","knowledge","achievements","ranks","launch"];
+  const TABS_ROW1 = ["build","upgrade","knowledge","achievements"];
+  const TABS_ROW2 = ["ranks","stats","launch"];
 
   const bCardProps = {buildings,res,prod,canAfford,buildingCost,buyBuilding,sellBuilding,knowledge};
 
@@ -1997,7 +2024,7 @@ function App() {
         <div style={{position:"fixed",inset:0,background:"#000000dd",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000,padding:8}} onClick={()=>setSupportModal(false)}>
           <div style={{background:"#0a1525",border:"1px solid #6f9ec9",borderRadius:12,padding:"16px 18px",maxWidth:540,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #1e3a5f"}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>ℹ Support & Patch Notes</div>
+              <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>ℹ Support & Patch Notes <span style={{fontSize:10,color:"#5a7a9a",fontWeight:400}}>{PATCH_NOTES[0].version}</span></div>
               <button onClick={()=>setSupportModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
             </div>
             <div style={{overflowY:"auto",flex:1}}>
@@ -2024,6 +2051,36 @@ function App() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Run Summary modal */}
+      {runSummary&&(
+        <div style={{position:"fixed",inset:0,background:"#000000f0",display:"flex",alignItems:"center",justifyContent:"center",zIndex:4000,padding:12}}>
+          <div style={{background:"#0a1525",border:"2px solid #4a9eff",borderRadius:16,padding:"24px 22px",maxWidth:400,width:"100%",textAlign:"center"}}>
+            <div style={{fontSize:36,marginBottom:6}}>🚀</div>
+            <div style={{fontSize:18,fontWeight:700,color:"#4a9eff",marginBottom:2}}>Colony Ship Launched!</div>
+            <div style={{fontSize:11,color:"#5a7a9a",marginBottom:16}}>Leaving {runSummary.planet} — bound for {runSummary.nextPlanet}</div>
+            {runSummary.newBest&&<div style={{fontSize:11,color:"#e6a817",background:"#1a1000",border:"1px solid #e6a817",borderRadius:6,padding:"4px 10px",marginBottom:12,display:"inline-block"}}>⭐ New Personal Best!</div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16,textAlign:"left"}}>
+              {[
+                ["Run Time", fmtTime(runSummary.time)],
+                ["Legacy Points", "+"+FMT(runSummary.lp)],
+                ["Total Clicks", FMT(runSummary.totalClicks)],
+                ["Buildings Built", runSummary.totalBuildings],
+                ["Knowledge Nodes", runSummary.knowledgeCount+"/"+KNOWLEDGE.length],
+                ["Upgrades", runSummary.upgradesCount],
+              ].map(([label,val])=>(
+                <div key={label} style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:6,padding:"8px 10px"}}>
+                  <div style={{fontSize:9,color:"#5a7a9a",marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#a0c4ff"}}>{val}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>setRunSummary(null)} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#4a9eff",color:"#000",cursor:"pointer",fontSize:13,fontWeight:700}}>
+              {"Embark for "+runSummary.nextPlanet+" →"}
+            </button>
           </div>
         </div>
       )}
@@ -2227,18 +2284,27 @@ function App() {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div style={{display:"flex",gap:1,padding:"6px 4px 0",background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
-        {TABS.map(t=>{
-          const badge = t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:t==="ranks"?ranksBadge:0;
-          return(
-            <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"6px 1px",border:"none",borderRadius:"5px 5px 0 0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:9,fontWeight:tab===t?700:400,whiteSpace:"nowrap",position:"relative"}}>
-              {t==="achievements"?<span className="tab-label-ach-short"></span>:t==="knowledge"?<span className="tab-label-know-short"></span>:t==="launch"?"Launch":t==="ranks"?"Ranks":t.charAt(0).toUpperCase()+t.slice(1)}
-              {badge>0&&<Badge count={badge}/>}
-            </button>
-          );
-        })}
-      </div>
+      {/* Tab bar — two rows */}
+      {(()=>{
+        const tabLabel = t => t==="achievements"?"Achiev.":t==="knowledge"?"Know.":t==="launch"?"Launch":t==="ranks"?"Ranks":t==="stats"?"Stats":t.charAt(0).toUpperCase()+t.slice(1);
+        const tabBadge = t => t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:t==="ranks"?ranksBadge:0;
+        const rowStyle = ri => ({display:"flex",gap:1,padding:ri===0?"6px 4px 0":"0 4px"});
+        const btnStyle = (t,ri) => ({flex:1,padding:"5px 2px",border:"none",borderRadius:ri===0?"5px 5px 0 0":"0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:10,fontWeight:tab===t?700:400,whiteSpace:"nowrap",position:"relative"});
+        return (
+          <div style={{background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
+            {[TABS_ROW1, TABS_ROW2].map((row,ri)=>(
+              <div key={ri} style={rowStyle(ri)}>
+                {row.map(t=>(
+                  <button key={t} onClick={()=>setTab(t)} style={btnStyle(t,ri)}>
+                    {tabLabel(t)}
+                    {tabBadge(t)>0&&<Badge count={tabBadge(t)}/>}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Panel */}
       <div style={{background:lt.bg,border:"1px solid "+lt.border,borderTop:"none",borderRadius:"0 0 10px 10px",padding:"10px 8px",minHeight:300,boxShadow:"inset 0 4px 16px #00000080"}}>
@@ -2359,6 +2425,40 @@ function App() {
             <RanksContent xpData={xpData} setXpData={setXpData} activeRank={activeRank} prestige={prestige}/>
           </div>
         )}
+
+        {tab==="stats"&&(()=>{
+          const totalBldgs = Object.values(buildings).reduce((a,v)=>a+v,0);
+          const totalResProduced = Object.values(totalRes).reduce((a,v)=>a+v,0);
+          const uniquePlanets = Object.keys(xpData.firstTime?.planets||{}).length;
+          const StatRow = ({label,val,sub})=>(
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"5px 0",borderBottom:"1px solid #0d1a2e"}}>
+              <span style={{fontSize:11,color:"#7a9abf"}}>{label}</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#a0c4ff"}}>{val}{sub&&<span style={{fontSize:9,color:"#5a7a9a",marginLeft:4}}>{sub}</span>}</span>
+            </div>
+          );
+          return (
+            <div style={{maxWidth:540,margin:"0 auto"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#a0c4ff",marginBottom:8,letterSpacing:1}}>📊 THIS RUN</div>
+              <div style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+                <StatRow label="Run Time" val={fmtTime(elapsed)}/>
+                <StatRow label="Total Clicks" val={FMT(totalClicks)}/>
+                <StatRow label="Buildings Owned" val={totalBldgs}/>
+                <StatRow label="Upgrades Purchased" val={upgrades.length}/>
+                <StatRow label="Knowledge Nodes" val={knowledge.length} sub={"/ "+KNOWLEDGE.length}/>
+                <StatRow label="Resources Generated" val={FMT(Math.floor(totalResProduced))}/>
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:"#a0c4ff",marginBottom:8,letterSpacing:1}}>🌌 ALL TIME</div>
+              <div style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+                <StatRow label="Colony Ships Launched" val={xpData.totalLaunches||0}/>
+                <StatRow label="Total XP Earned" val={FMT(xpData.totalEarned||0)}/>
+                <StatRow label="Personal Best" val={xpData.bestRunSecs?fmtTime(xpData.bestRunSecs):"—"}/>
+                <StatRow label="Unique Planets Visited" val={uniquePlanets} sub={"/ "+PLANETS.length}/>
+                <StatRow label="Ranks Owned" val={(xpData.ownedRanks||[]).length} sub={"/ "+RANKS.length}/>
+                <StatRow label="Daily Streak" val={(xpData.dailyStreak||0)+" day"+(xpData.dailyStreak===1?"":"s")}/>
+              </div>
+            </div>
+          );
+        })()}
 
         {tab==="launch"&&(()=>{
           const phaseDefs = PHASE_IDS.map(id => BUILDINGS[id]);
