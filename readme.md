@@ -166,8 +166,7 @@ Features planned for future runs:
 - **Referral / Share Link** — one-click share that opens itch.io, for word-of-mouth growth.
 
 ### Story & World
-- **Story Enhancement Pass** *(priority — complete before NG+ Modifiers)* — audit and expand all existing story beats across all three layers. More ticker events, better pacing, and ensure every major milestone has a narrative moment. This is the foundation for Story Effects and Environmental Storylines.
-- **Dave Lore Enhancement** — expand Dave's presence across all story events: more Dave-specific comms chatter, a multi-run arc that builds toward a reveal, and tie the Dave secret rank to unlocking deeper story layers. Dave is the heart of the game's humour and deserves a full arc.
+- **Story Effects on Gameplay** — story events should trigger real mechanical effects: a solar flare temporarily doubles energy, antimatter incident locks an upgrade for 60 seconds, Dave's calculations award a fuel bonus. Ties narrative to simulation and rewards players paying attention.
 - **Story Effects on Gameplay** — story events should have real mechanical consequences, not just flavor text. A solar flare temporarily doubles energy production. An antimatter incident locks one upgrade for 60 seconds. The Dave Upload event grants a permanent +5% all production. Discovery of strange ore unlocks a new building. Ties the narrative directly to the simulation and rewards players for paying attention to story beats.
 - **Environmental Storylines** — planet-specific story arcs driven by the environment itself: weather events on a frozen world, volcanic eruptions on a magma planet, atmospheric storms on a gas giant moon, tidal cycles on an ocean world. Each biome (see Biomes backlog item) gets 3-5 unique environmental events that fire across a run, building a sense of place beyond just stat modifiers.
 - **Dave Lore Arc** — a dedicated Dave storyline that evolves across prestige runs, building toward a reveal about what Dave actually is.
@@ -177,6 +176,13 @@ Features planned for future runs:
 ---
 
 ## Changelog
+
+### v1.1
+- ★ 30 Biomes — each prestige run lands on a uniquely flavoured world: Mushroom World, Sentient Fog, Dave World, Chaos World, Gerald's World, The Waiting Room, and 24 more. Biome shown as a badge in the header.
+- ★ Biome weather events — the comms ticker pulls biome-specific events 40% of the time, grounding the run in its environment
+- ★ Dave Arc — 6 new story events building a cross-layer mystery arc: Dave's Question → Dave in the Ore → Dave Knows the Planet → Dave's Calculations → The Signal Is Dave → Dave Chooses
+- ★ 10 new story events filling narrative gaps across all three layers (Resonance, First Harvest, What the Ore Becomes, Patient Zero, Deep Cut, Margaret's Report, Sleeping Volunteers, The View From Here, Second Signal, The Weight of It)
+- 25 new ambient colony chatter events (pool doubled from 12 to 37)
 
 ### v1.0
 - ★ Two new buildings: Quarry (minerals tier 2, requires 5× Drill Rigs) and Nursery (population tier 2, requires 5× Habitat Domes)

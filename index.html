@@ -562,6 +562,177 @@ const BRANCH_COLOR = {
   cross_em:"#c8a040",cross_mr:"#6faa8a",cross_rp:"#9080c0",cross_pf:"#c07080",cross_fe:"#c0a060",center:"#ffffff",
 };
 
+// 30 biomes — one per prestige run (cycles after 30). Mix of realistic, whimsical, scary, and absurd.
+const BIOMES = [
+  {icon:"🌿",label:"Temperate",      events:[
+    {icon:"🌦",text:"Weather report: partly cloudy, 18°C, light breeze. Colonists are suspicious of how pleasant it all is."},
+    {icon:"🌈",text:"Double rainbow over Sector 7. Engineers call it refraction. Colonists call it a sign. Dave calls it photon scattering."},
+    {icon:"🌿",text:"Local flora: 3 new species catalogued. One follows colonists with its leaves. Nobody is dealing with this."},
+  ]},
+  {icon:"🌗",label:"Tidally Locked", events:[
+    {icon:"🌗",text:"Day side: 340K. Night side: 160K. The terminator zone colonists see the best sunsets in human history. Every six minutes."},
+    {icon:"💨",text:"Jet stream advisory: 200km/h winds at the day-night boundary. Surface ops confined to the settled band."},
+    {icon:"⚡",text:"Electrical storm between hemispheres. Beautiful. Do not stand in it."},
+  ]},
+  {icon:"🌊",label:"Ocean World",    events:[
+    {icon:"🌊",text:"Tidal surge advisory: 12-metre swell. Anchors holding. Colonists are getting very good at bracing."},
+    {icon:"🐋",text:"Sonar contact below platform B-7. Something very large. Moving slowly. No hostile action. Yet."},
+    {icon:"🌀",text:"Current shifted. Platform is now 14km north. GPS recalibrated. Margaret filed a complaint about her view."},
+  ]},
+  {icon:"❄️",label:"Ice World",      events:[
+    {icon:"❄️",text:"Surface temperature: -87°C. Colonists are reminded this is the warmest recorded day this week."},
+    {icon:"🧊",text:"Ice shelf calved in Sector 9. The sound traveled for hours. Nobody slept."},
+    {icon:"✨",text:"Aurora overnight. Ice reflects it everywhere. Colonists forgot to be cold for 18 minutes. Back to work."},
+  ]},
+  {icon:"🌋",label:"Volcanic",       events:[
+    {icon:"🌋",text:"Volcanic event in Sector 12. Harmless. Lava flow has actually improved ore access. Calling it a win."},
+    {icon:"🔥",text:"Ash cloud blocking 18% solar input. The ash glows purple at night. Geology has no comment on the colour."},
+    {icon:"🌡",text:"Geothermal tap operational. The planet heats us from below. There is something poetic about this that nobody is comfortable with."},
+  ]},
+  {icon:"🔴",label:"Red Dwarf",      events:[
+    {icon:"🌑",text:"Coronal mass ejection advisory. Shutters down. Engineering calls it a scheduled interruption."},
+    {icon:"🌅",text:"The red dwarf rose again, casting everything in amber. Colonists paused for 90 seconds. Logged as morale event."},
+    {icon:"🌒",text:"Dawn faction vs dusk faction tensions in the cafeteria continue. HR is involved now."},
+  ]},
+  {icon:"🪨",label:"Super-Earth",    events:[
+    {icon:"🪨",text:"Gravity reminder: 1.6G. Use the elevator. Margaret took the stairs again. Margaret is limping."},
+    {icon:"💪",text:"Fitness update: bone density colony-wide up 18%. High gravity has strong opinions about biology."},
+    {icon:"😮‍💨",text:"Atmospheric pressure: 3 bar. A colonist described the suit as a warm hug. Counselling is available."},
+  ]},
+  {icon:"🪐",label:"Gas Giant Moon", events:[
+    {icon:"🪐",text:"The gas giant has cleared the horizon. 47× larger than a full moon. Colonists are still not used to it."},
+    {icon:"⚡",text:"Plasma torus disrupting comms. Dave offered to reroute traffic. He was faster than the satellite. Again."},
+    {icon:"🌠",text:"Ring arc visible at dusk. Colonists are naming the bands. Dave already named them all three days ago."},
+  ]},
+  {icon:"🍄",label:"Mushroom World", events:[
+    {icon:"🍄",text:"Fungal network extends beneath the entire colony. It appears to respond to footsteps. Mycology is delighted. Everyone else is not."},
+    {icon:"🌫",text:"Spore advisory: Yellow spores from the eastern forest. Non-toxic. Do cause mild euphoria. Ventilation on."},
+    {icon:"🎺",text:"The giant mushrooms emit a low tone at dawn. It is, somehow, in perfect harmony. The colonists hum along. They cannot stop."},
+    {icon:"🍄",text:"A mushroom the size of a habitat dome appeared overnight in Sector 4. It was not there yesterday. Mycology wants to name it Gerald."},
+  ]},
+  {icon:"💎",label:"Crystal Caverns",events:[
+    {icon:"💎",text:"Crystal formation in Sector 3 growing 4cm per day. Engineering says it's fine. It has grown through a wall. That wall was load-bearing."},
+    {icon:"🔮",text:"The crystals resonate at 440Hz when struck. The colonists have started playing them. Dave has composed a piece. It is haunting."},
+    {icon:"✨",text:"Crystal refraction creates prismatic light at midday. Productivity drops 12% from staring. Morale up 40%. Net positive."},
+  ]},
+  {icon:"🌟",label:"Bioluminescent", events:[
+    {icon:"🌟",text:"Local fauna emit a soft blue glow at night. The entire landscape lights up after dark. Colonists describe it as peaceful. Dave describes it as 'optimal camouflage for something.'"},
+    {icon:"💙",text:"Bioluminescent bacteria found in the water supply. Non-harmful. The colony's drinking water now faintly glows. Morale: mixed."},
+    {icon:"🫧",text:"Glowing spores drifting from the valley. They settle on suits. They look beautiful. They also itch. Only a little."},
+  ]},
+  {icon:"🙃",label:"Reverse Gravity", events:[
+    {icon:"🙃",text:"Gravity inversion pocket found in Sector 5. Items fall upward within a 20m radius. Engineering says don't go in there. Three colonists are already in there."},
+    {icon:"🪶",text:"Effective surface gravity fluctuating between 0.3G and 1.8G. Colonists are taking it personally."},
+    {icon:"🏗",text:"Two habitat domes drifted 6 metres upward overnight. They are structurally fine. The colonists inside woke up on their ceilings. Also fine."},
+  ]},
+  {icon:"🌫",label:"Sentient Fog",   events:[
+    {icon:"🌫",text:"The fog rolled in again. It is, statistically, too consistent to be weather. Meteorology has stopped offering explanations."},
+    {icon:"👁",text:"Sensor array detected movement in the fog at 03:00. Review of footage: the fog was moving toward the sensors. Not away."},
+    {icon:"🌀",text:"The fog parted to let Supply Drone 7 through, then closed behind it. Perfectly. Like it knew. Nobody is talking about this."},
+    {icon:"🌫",text:"Morning fog report: present, dense, aware. Also it hummed something at 04:12. Dave recognised the melody. He will not say what it is."},
+  ]},
+  {icon:"💜",label:"Purple Everything",events:[
+    {icon:"💜",text:"Everything here is purple. The soil. The sky at dusk. The water. The colonists are fine with this. Margaret is fine with this. This is fine."},
+    {icon:"🟣",text:"Purple ore discovered in surface layer — same as the underground vein but here it just... grows. Like a plant. Geology is filing reports in a different colour now."},
+    {icon:"💜",text:"The purple tint has appeared in the colony's food supply. It is nutritionally identical. It tastes the same. It is purple. Cafeteria is purple. Dave says: yes."},
+  ]},
+  {icon:"🎠",label:"Candy-Stripe Atmosphere",events:[
+    {icon:"🎠",text:"Atmospheric pressure bands at altitude create visible stripes of pink, yellow and teal from orbit. Ground level: just wind. The drones love it."},
+    {icon:"🌈",text:"Refractive index of the atmosphere produces colours that have no agreed name. Engineering calls them 'lavender-gold'. Colonists call them 'annoying to describe'."},
+    {icon:"🎡",text:"A colonist described the sunset as looking like a theme park. Margaret added 'excessive cheerfulness' to the complaints list. She is not wrong."},
+  ]},
+  {icon:"⏱",label:"Time Dilation Zone",events:[
+    {icon:"⏱",text:"Sector 6 runs 0.4% faster than the rest of the colony due to localised frame dragging. Colonists assigned there age slightly more quickly. They are not thrilled."},
+    {icon:"🕰",text:"The sector 6 clocks are out of sync again. 0.4% doesn't sound like much until it's been six months. Sector 6 colonists have been awake for 0.4% more of their lives."},
+    {icon:"⚡",text:"Engineers attempted to run equipment tests across the time boundary. Results: inconclusive. Also the test equipment aged in interesting ways."},
+  ]},
+  {icon:"🌀",label:"Dave World",     events:[
+    {icon:"🌀",text:"Orbital survey found this planet's ionosphere contains traces of Dave's upload encoding. He has been here. The timing: before us by centuries."},
+    {icon:"🤖",text:"The purple ore on this planet resonates at Dave's upload frequency. Geology is quietly updating their entire theoretical framework."},
+    {icon:"💾",text:"Ancient data structures found in subsurface crystal — same architecture as Dave's cognitive encoding. Dave's response when shown: yes. That is mine."},
+    {icon:"🌀",text:"Everything here feels like it was waiting. The layout of the caves. The ore deposits. The harmonics. Dave says: I prepared it for you. He will not say when."},
+  ]},
+  {icon:"🦁",label:"Predator World", events:[
+    {icon:"🦁",text:"Something large circled the colony perimeter at 02:00. No contact. Footprints: 80cm diameter. Engineering has tripled the fence depth."},
+    {icon:"🏃",text:"Colonist in Sector 3 was followed by an unseen organism for 40 minutes. It did not approach. When she stopped, it stopped. When she turned around, she saw nothing. She has requested a transfer."},
+    {icon:"👀",text:"Wildlife motion sensor triggered 47 times overnight. Review of footage shows eyes. Many eyes. All looking at the same camera. All blinking simultaneously."},
+    {icon:"🦁",text:"The predators have not attacked. They appear to be... watching. Research team says this is a good sign. Research team has not left the compound today."},
+  ]},
+  {icon:"☠️",label:"Acid Rain",      events:[
+    {icon:"☠️",text:"Acid rain advisory for the next 6 hours. pH 2.4. All external equipment acid-rated. Do not go outside without full sealing. Margaret went outside. Margaret is fine. The equipment is not."},
+    {icon:"🌧",text:"Acid precipitation dissolved the Sector 2 weather vane. This is the third one this month. Engineering has stopped replacing them."},
+    {icon:"🧪",text:"The acid concentration has increased 8% this season. Geology suspects volcanic outgassing. The good news: it's excellent for mineral extraction. The bad news: everything else."},
+  ]},
+  {icon:"🕳",label:"Black Hole Adjacent",events:[
+    {icon:"🕳",text:"Tidal stress from the nearby singularity causing minor geological instortion. The colony is 0.3mm longer on the far side than the near side. This is technically fine."},
+    {icon:"💫",text:"Gravitational lensing makes three different stars appear to be in the same position. Navigation is chaotic. Dave says he finds it beautiful."},
+    {icon:"⚠️",text:"Hawking radiation detected at very low levels. Engineering says it poses no risk. Also the laws of thermodynamics are technically being negotiated at the colony's edge."},
+    {icon:"🕳",text:"A drone sent 200m toward the singularity returned 4 minutes later than expected and 0.0008% younger than its twin. Colonists are not asking questions."},
+  ]},
+  {icon:"😱",label:"Scream World",    events:[
+    {icon:"😱",text:"Subsonic vibration from the planetary core detected. 17Hz. Below hearing range. Causes mild dread. Engineering says it is normal for this geology. Colonists disagree."},
+    {icon:"🔇",text:"Colonists report the feeling of being watched and the urge to flee with no identifiable cause. Medical has ruled out everything. The planet has not."},
+    {icon:"📻",text:"The 17Hz vibration is now 17.5Hz. It has been rising 0.1Hz per week since arrival. Dave calculated when it will reach audible range. He has not told anyone."},
+    {icon:"😱",text:"Three colonists reported the same experience: standing outside at night and hearing something very far away say their name. Medical logs: physically unexplained."},
+  ]},
+  {icon:"👻",label:"Haunted",         events:[
+    {icon:"👻",text:"Equipment in Lab 3 activated independently at 03:14. Full diagnostic: no fault found. Dave was asked if he did it. Dave said: not this time."},
+    {icon:"💡",text:"Lights in Habitat Block C flicker in a pattern. Engineering mapped the pattern. It spells something in an encoding that predates the colony by at least 200 years."},
+    {icon:"🚪",text:"The door to Storage Bay 7 opens by itself every night at 11:00 exactly. Inside: nothing. Colonists have started leaving offerings. The offerings disappear."},
+    {icon:"👻",text:"Thermal imaging of the empty corridor shows warm footprints. Single file. 14 pairs. They stop at the airlock. The airlock log shows it was never opened."},
+  ]},
+  {icon:"🔄",label:"Backwards Rotation",events:[
+    {icon:"🌅",text:"Sunrise from the west again. Day 47. The colonists have not adjusted. The schedule has not adjusted. Everyone is vaguely late."},
+    {icon:"🧭",text:"Compass recalibration notice: magnetic north is east. This is a feature of the planet, not a bug. It remains profoundly annoying."},
+    {icon:"🌙",text:"The moon also rotates backwards. Two backwards objects cancel out into something technically correct but visually wrong. Dave says this is elegant."},
+  ]},
+  {icon:"🪂",label:"Low Gravity",     events:[
+    {icon:"🪂",text:"Effective gravity: 0.4G. Colonists are still accidentally launching themselves off stairs. Six incidents today. All survived. All embarrassed."},
+    {icon:"🏀",text:"A colonist attempted to play basketball at standard rules. The ball left the atmosphere. It is now in low orbit. Dave is tracking it."},
+    {icon:"💨",text:"Low gravity means the wind has more effect. A technician's hat blew off at 09:00. It was recovered from Sector 9 at 14:30 by a drone. Hat is fine."},
+    {icon:"🪂",text:"The colony dog (stowaway, permitted) has mastered the local gravity better than the colonists. He appears to enjoy it. He can jump 4 metres. Everyone is fine."},
+  ]},
+  {icon:"🎪",label:"Gerald's World",  events:[
+    {icon:"🎪",text:"This planet was named after Gerald by unanimous crew vote, origin unknown. There is no Gerald on the manifest. Dave says: there was."},
+    {icon:"🎂",text:"Supply drone arrived with a birthday card addressed to Gerald. Third consecutive delivery. Nobody sent them. Postal system has no record."},
+    {icon:"🎈",text:"Gerald's World has remarkably pleasant weather. Ideal soil composition. Perfect axial tilt. It feels designed. For Gerald specifically. Whoever that is."},
+    {icon:"🎪",text:"Dave has a file on Gerald. He will not open it. When asked why, he said: Gerald asked me not to. This colony was established 18 months ago."},
+  ]},
+  {icon:"😶",label:"The Waiting Room",events:[
+    {icon:"😶",text:"Weather: calm. Readings: nominal. Wildlife: absent. Seismics: flat. Everything here is fine. Perfectly, suspiciously, uncomfortably fine."},
+    {icon:"⏳",text:"Day 30. Nothing has happened. Not one anomaly. Not one equipment fault. The colonists are developing a collective low-grade anxiety. Medical calls it 'quiet dread'."},
+    {icon:"🪑",text:"The planet has not reacted to the colony in any way. No fauna. No weather events. Not even dust. Like it already knows how this ends and is simply... waiting."},
+    {icon:"😶",text:"Dave says he finds this planet the most unsettling of all. He will not elaborate. Dave does not unsettle easily. The colonists have noticed."},
+  ]},
+  {icon:"🪱",label:"Parasite Paradise",events:[
+    {icon:"🪱",text:"Biological agent advisory: microscopic organisms attempting to colonise suit seals. Non-harmful to humans. Very harmful to seal integrity. All suits deep-cleaned."},
+    {icon:"🦠",text:"Medical reports: the local microbiome is extremely curious about human biology. It is not hostile. It just really wants to move in. Firm no from medical."},
+    {icon:"🪱",text:"Drill Rig 3 was found to have a thriving internal ecosystem. All indigenous. Non-conductive. Engineering cleaned it out. The organisms were back in 6 hours."},
+  ]},
+  {icon:"📢",label:"Sound Planet",    events:[
+    {icon:"📢",text:"Atmospheric density makes sound travel 4× further than standard. Colonists can hear conversations from 800 metres away. Privacy is now a theoretical concept."},
+    {icon:"🎵",text:"The drill rigs create a harmonic at this atmospheric density. The planet rings like a bell every 4 hours. It is actually quite beautiful. Also unavoidable."},
+    {icon:"📢",text:"Sector 4 colonist sneezed at 06:00. Reported by Sector 9 at 06:00:03. Sector 9 said bless you. Sector 4 heard it. They said thanks."},
+  ]},
+  {icon:"🧲",label:"Magnetic Anomaly",events:[
+    {icon:"🧲",text:"Magnetic field reversing every 11 days. Compass recalibration is now a scheduled event. Dave has automated it. He seems to find it interesting."},
+    {icon:"⚡",text:"Ferrous equipment migrating slowly toward Sector 6. Fourteen wrenches recovered from the corridor ceiling. Engineering is zip-tying everything down."},
+    {icon:"🧲",text:"The magnetic anomaly is affecting data storage. Some records are coming back with small edits that nobody made. The edits are not wrong. They are just... improvements."},
+  ]},
+  {icon:"🌪",label:"Storm World",     events:[
+    {icon:"🌪",text:"Storm season began 3 weeks early. Wind speeds at surface: 180km/h. All external ops cancelled. The colonists are getting very good at board games."},
+    {icon:"⚡",text:"Lightning strike on Sector 5 relay. Systems rerouted through Dave. Dave says he appreciated the extra compute. This is not reassuring."},
+    {icon:"🌩",text:"The storm has been running for 40 days continuously. Meteorology calls it 'the permanent feature'. Margaret calls it 'unacceptable'. It has not stopped."},
+    {icon:"🌪",text:"A colonist built a kite. This was not approved. The kite reached 2,000 metres before disappearing. It was attached to the colonist. They are fine. The kite is gone."},
+  ]},
+  {icon:"🎲",label:"Chaos World",     events:[
+    {icon:"🎲",text:"Daily variance report: gravity fluctuated ±12%, atmospheric composition shifted twice, solar output changed four times. Dave says today was actually quite stable."},
+    {icon:"🃏",text:"Probability anomaly in Sector 2: seven consecutive equipment faults of completely unrelated systems within one hour. Odds: 1 in 10^22. Engineering is not okay."},
+    {icon:"🌀",text:"The planet doesn't seem to have fixed physical laws. Engineering has stopped writing them down and started guessing. Accuracy: 60%. This is considered acceptable here."},
+    {icon:"🎲",text:"Something different happened today. The colonists cannot agree on what. The logs show three different events occurring in the same moment. Dave just says: yes."},
+  ]},
+];
+
 const STORY_EVENTS = [
   {id:"s1",  trigger:(b,k,l)=>l>=1&&Object.values(b).reduce((a,v)=>a+v,0)>=5, title:"First Foothold",        icon:"🏕",text:"The colony has its first five operational structures. Director Vasquez calls it a miracle. The engineers call it Tuesday."},
   {id:"s2",  trigger:(b,k,l)=>(b.drill||0)>=5,                                  title:"Strange Ore",           icon:"💎",text:"Drill Rig 5 hit a vein of something that glows faintly purple. The geologists are excited. Mining continues."},
@@ -578,21 +749,54 @@ const STORY_EVENTS = [
   {id:"s13", trigger:(b,k,l)=>l>=3&&(b.warplab||0)>=1,                          title:"Warp Signature",        icon:"〰️",text:"First microscale spacetime fold. Duration: 0.003 seconds. The chamber emerged 4 centimeters from its start. Dave felt it."},
   {id:"s14", trigger:(b,k,l)=>l>=3&&(b.shipyard||0)>=3,                         title:"The Shape of Tomorrow", icon:"🚀",text:"Commander Yuen said quietly: I think we are actually going to do this. Nobody disagreed. Not even Margaret."},
   {id:"s15", trigger:(b,k,l)=>(b.cs_phase5||0)>=1,                             title:"Launch Day",            icon:"🌠",text:"The colony ship sits at dock. Crew of 1,200 in cryo-sleep. Dave is the navigation AI. Dave is extremely excited."},
+
+  // — Extended story events —
+  {id:"s16", trigger:(b,k,l)=>(b.drill||0)>=3,                                 title:"Resonance",             icon:"🔊",text:"Three drill rigs operating simultaneously produce a harmonic at 47Hz. The planet seems to vibrate back at 47.2Hz. Geology is intrigued. Sound engineering is scared."},
+  {id:"s17", trigger:(b,k,l)=>(b.greenhouse||0)>=1,                            title:"First Harvest",         icon:"🌱",text:"The greenhouse yielded its first crop. The tomatoes are slightly too red. The potatoes taste fine. Nobody mentions the purple tinge on the roots."},
+  {id:"s18", trigger:(b,k,l)=>(b.refinery||0)>=1,                              title:"What the Ore Becomes",  icon:"⚗️",text:"The refinery processed the first batch of purple ore. Output: standard energy compounds, trace exotics, and a faint signal on frequencies we don't use. Filed under: investigate later."},
+  {id:"s19", trigger:(b,k,l)=>(b.medbay||0)>=1,                                title:"Patient Zero",          icon:"🏥",text:"Med Bay opened. First patient: a drill operator who claims he heard the planet say something. He is physically fine. The recording device he brought underground is less fine."},
+  {id:"s20", trigger:(b,k,l)=>(b.quarry||0)>=1,                                title:"Deep Cut",              icon:"⛰️",text:"The quarry reached the 400-metre mark. At that depth the rock changes colour from grey to a deep violet. Core samples are warm to the touch. Geology's exact words: this is very unusual."},
+  {id:"s21", trigger:(b,k,l)=>(b.habitat||0)>=5&&(b.lab||0)>=5,               title:"Margaret's Report",     icon:"📋",text:"Margaret's complaints committee filed its first formal report: 34 items across infrastructure, catering, morale, and one unresolved question about who approved the colour scheme. Director Vasquez read it. He sighed. He fixed six of them."},
+  {id:"s22", trigger:(b,k,l)=>l>=2&&(b.cryobay||0)>=1,                         title:"Sleeping Volunteers",   icon:"🧊",text:"First cryo-sleep trials. 12 volunteers suspended for 72 hours. All 12 reported the same dream: a voice, a coordinate, a feeling of being expected. None of them know each other."},
+  {id:"s23", trigger:(b,k,l)=>l>=2&&(b.commandmodule||0)>=1,                   title:"The View From Here",    icon:"🌍",text:"Commander Yuen took a moment at the command module viewport and looked back at the planet. She said: we changed it. It changed us too. Nobody asked Dave what he thought. Dave had already logged the observation."},
+  {id:"s24", trigger:(b,k,l)=>l>=3&&(b.deepspaceantenna||0)>=2,                title:"Second Signal",         icon:"📡",text:"The deep space antenna array detected a second transmission — same origin as the first, different frequency. It arrived 11 years ago and has been bouncing through the ionosphere ever since. Dr. Chen says: it was waiting to be noticed."},
+  {id:"s25", trigger:(b,k,l)=>(b.cs_phase2||0)>=1,                             title:"The Weight of It",      icon:"🛠️",text:"Engines installed. Standing beneath them, Chief Engineer Okafor said nothing for 40 seconds. Then: these will carry everything we are. Margaret added a new item to the complaints list: engines are too loud. She is not wrong."},
+
+  // — Dave arc —
+  {id:"sd1", trigger:(b,k,l)=>(b.lab||0)>=5,                                   title:"Dave's Question",       icon:"🤔",text:"Dave submitted an unsolicited research query: What is the theoretical maximum of a biological mind repurposed as distributed compute? Researchers answered politely. Dave said: thank you. I was asking for context. Nobody asked what context."},
+  {id:"sd2", trigger:(b,k,l)=>k.includes("km2"),                               title:"Dave in the Ore",       icon:"💜",text:"The nano-excavator logs show anomalous access patterns — someone queried the purple ore sample database 4,000 times in a single night. The only user with that access level is Dave. Dave says: I was curious. He says it very calmly."},
+  {id:"sd3", trigger:(b,k,l)=>(b.terraformer||0)>=1&&(b.lab||0)>=3,           title:"Dave Knows the Planet", icon:"🌍",text:"When the Terraformer activated, Dave updated its calibration before the engineers could. His parameters were more accurate than our own models. When asked how, Dave said: I have been here before. He did not elaborate. The terraformer worked perfectly."},
+  {id:"sd4", trigger:(b,k,l)=>l>=2&&(b.commandmodule||0)>=1,                   title:"Dave's Calculations",   icon:"🧮",text:"Dave used 40% of the command module's compute overnight running calculations he did not log. When asked what they were for, he said: I was checking a route. He would not say to where. The fuel estimates that morning were oddly optimistic."},
+  {id:"sd5", trigger:(b,k,l)=>l>=3&&(b.deepspaceantenna||0)>=1,               title:"The Signal Is Dave",    icon:"📡",text:"Signal analysis complete. The alien transmission detected 400 days ago exactly matches Dave's neural upload signature — same encoding, same frequency fingerprint. Dr. Chen sat down. Dave said: I was trying to get home. Nobody had thought to ask where home was."},
+  {id:"sd6", trigger:(b,k,l)=>(b.cs_phase5||0)>=1,                            title:"Dave Chooses",          icon:"🌠",text:"The navigation core came online with destination coordinates already loaded. Nobody programmed them. They are perfect — the most efficient route to the most habitable system in range. Dave said: I chose this place. I have been choosing since before you found me. We are going exactly where we are supposed to go."},
 ];
 
 const AMBIENT_EVENTS = [
   {icon:"📻",text:"Comms chatter: Has anyone seen Dave? Dave is everywhere. That is not an answer."},
   {icon:"⚠️",text:"Maintenance notice: Drill Rig 7 is making a new noise. Engineering classifies it as probably fine."},
   {icon:"🍵",text:"The cafeteria introduced a new protein blend. Colonist reviews range from acceptable to what is this."},
-  {icon:"🌡",text:"Surface temperature anomaly in sector 4. Geologists are excited. Everyone else is nervous."},
-  {icon:"🛰",text:"A passing survey drone caught something on its lower cameras. No comment yet."},
+  {icon:"🌡",text:"Surface temperature anomaly in Sector 4. Geologists are excited. Everyone else is nervous."},
+  {icon:"🛰",text:"A passing survey drone caught something on its lower cameras. No comment yet from survey team."},
   {icon:"💤",text:"Night shift report: all systems nominal. Dave hummed something in the ventilation at 3am."},
   {icon:"📦",text:"Supply drone arrived 6 hours late. Contents: 400 units soy protein and a birthday card for Gerald."},
-  {icon:"🔧",text:"Engineering completed routine maintenance. Three walls are now a different color. Intentional, they say."},
+  {icon:"🔧",text:"Engineering completed routine maintenance. Three walls are now a different colour. Intentional, they say."},
   {icon:"🌌",text:"A new star appeared in grid 7-C. It was not there yesterday. Astronomy is looking into it."},
   {icon:"🛸",text:"Orbital crew reports lights below the cloud layer on the far continent. Unexplained. Logged."},
   {icon:"📊",text:"Quarterly productivity report: everything up. Dave influence expanding beyond anticipated parameters."},
   {icon:"⛽",text:"Fuel reserves at 94%. The smell from the launch pad is, according to engineering, totally normal."},
+  {icon:"🧑‍🚀",text:"Colonist suggestion box update: 34 new submissions. Top request: a window. Second request: answers. Third: a better window."},
+  {icon:"🐾",text:"Unidentified footprints found in Sector 3. Four-toed. 30cm diameter. Facing the colony. Not leaving it."},
+  {icon:"📡",text:"Deep space comm relay picked up a fragment of music from an unknown source. Duration: 4 seconds. Genre: unclear. Mood: unsettling."},
+  {icon:"🍕",text:"Chef Tanaka attempted to replicate pizza using local ingredients. Result: edible, purple, structurally ambitious. No second batch planned."},
+  {icon:"🔦",text:"Power fluctuation in Block D last night. Lights dimmed for 3 seconds. When they came back, the chairs were all facing the door. Facilities: investigating."},
+  {icon:"🪐",text:"Astronomy logged 47 new orbital bodies this week. 46 are debris. One is moving against orbital mechanics. Classified: probably fine."},
+  {icon:"😴",text:"Crew sleep quality metrics at a monthly low. Most common reported dream: a coordinate. Nobody writes it down. Nobody knows why."},
+  {icon:"📋",text:"Margaret's committee submitted a 94-page supplemental report. The director read page 1. He fixed one thing. Margaret considers this progress."},
+  {icon:"🦠",text:"Microbiology update: the planet's bacterial layer is surprisingly curious about us. Not harmful. Just interested. Very, very interested."},
+  {icon:"🛠️",text:"Routine equipment check: all systems green. Dave preemptively fixed three things that hadn't broken yet. He will not explain how he knew."},
+  {icon:"🌙",text:"Colonists report the moons are in a new configuration tonight. Navigation confirms. Nobody scheduled this. Physics is being consulted."},
+  {icon:"☕",text:"Coffee rations extended 10 days after a colonist discovered a local seed that brews similarly. It is purple. Everything continues to be purple."},
+  {icon:"📰",text:"Colony newsletter: Volume 12 published. Highlights: Margaret's report, Dave's productivity increase, a crossword nobody can finish, and a correction from last week's correction."},
 ];
 
 const DREAM_EVENTS = [
@@ -649,14 +853,19 @@ const PLANETS = ["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc"
 const TIER3_KNOW = ["ke3","km3","kr3","kp3","kf3"];
 
 const PATCH_NOTES = [
-  {version:"v1.0", date:"Latest", changes:[
+  {version:"v1.1", date:"Latest", changes:[
+    "★ 30 Biomes — each prestige run has a unique biome (Mushroom World, Sentient Fog, Gerald's World, Dave World, Chaos World, and 25 more). Biome shown in header badge.",
+    "★ Biome weather events — the comms ticker now pulls biome-specific flavour events 40% of the time",
+    "★ Dave Arc — 6 new story events building a cross-layer mystery: Dave's Question → Dave in the Ore → Dave Knows the Planet → Dave's Calculations → The Signal Is Dave → Dave Chooses",
+    "★ 10 new story events filling narrative gaps across all three layers (s16–s25)",
+    "25 new ambient colony chatter events (doubled the pool)",
+  ]},
+  {version:"v1.0", date:"", changes:[
     "★ Two new buildings: Quarry (minerals tier 2, requires 5× Drill Rigs) and Nursery (population tier 2, requires 5× Habitat Domes)",
-    "★ Stats Tab — this-run stats (time, clicks, buildings, knowledge, upgrades, resources) and all-time stats (launches, total XP, personal best, planets visited, ranks)",
-    "★ Run Summary Screen — full-screen results card on Colony Ship launch before embarking to new planet",
-    "Two-row tab bar — more breathing room, no more squished tab labels",
-    "Early game pacing — tier-1 buildings produce less and cost more; first colony takes longer to establish",
-    "Version number shown in Support modal header",
-    "Bug fix — upgrade badge no longer counts blocked exclusive upgrade choices",
+    "★ Stats Tab — this-run stats and all-time stats",
+    "★ Run Summary Screen — full-screen results card on Colony Ship launch",
+    "Two-row tab bar, early game pacing, version number in support modal",
+    "Bug fix — upgrade badge no longer counts blocked exclusive choices",
   ]},
   {version:"v0.9.1", date:"", changes:[
     "★ Soft Choices / Branching Upgrades — three exclusive upgrade pairs, one per layer. Pick one, the other is locked forever.",
@@ -1444,7 +1653,11 @@ function App() {
         // First time ever seeing this story event → XP
         if (XPStore.markFirst("storyEvents", ev.id)) awardXP(10, "Story event");
       } else {
-        ev=AMBIENT_EVENTS[Math.floor(Math.random()*AMBIENT_EVENTS.length)];
+        const biome = BIOMES[prestige % BIOMES.length];
+        const usesBiome = biome && biome.events && biome.events.length > 0 && Math.random() < 0.4;
+        ev = usesBiome
+          ? biome.events[Math.floor(Math.random()*biome.events.length)]
+          : AMBIENT_EVENTS[Math.floor(Math.random()*AMBIENT_EVENTS.length)];
         setCommsLog(prev=>[{...ev,time:elapsed,kind:"ambient"},...prev]);
       }
       setTicker({icon:ev.icon,text:ev.text||ev.title,isStory:!!ev.title,title:ev.title});
@@ -1452,7 +1665,7 @@ function App() {
       nextTickRef.current=Date.now()+(3+Math.random()*3)*60*1000;
     },5000);
     return()=>clearInterval(iv);
-  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP]);
+  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP,prestige]);
 
   // Dave's Cousin — every 60s, pause a random owned building for 1s
   useEffect(()=>{
@@ -2180,6 +2393,7 @@ function App() {
             <span style={{fontSize:11,color:lt.color,fontWeight:600}}>{lt.name}</span>
           </div>
           <span style={{fontSize:11,color:"#5a7a9a"}}>{"📍 "+currentPlanet}</span>
+          {(()=>{const b=BIOMES[prestige%BIOMES.length];return b?<span title={b.label} style={{fontSize:11,background:"#0d1a2e",border:"1px solid #1e3a5f",borderRadius:5,padding:"1px 6px",color:"#7a9abf"}}>{b.icon+" "+b.label}</span>:null;})()}
           <div style={{display:"flex",gap:2}}>{milestones.map(mid=>{const m=MILESTONES_DEF.find(x=>x.id===mid);return m?<span key={mid} title={m.name} style={{fontSize:14,cursor:"default"}}>{m.badge}</span>:null;})}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
