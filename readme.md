@@ -154,9 +154,7 @@ Features planned for future runs:
 - **New Game Plus Modifiers** — after several prestiges, unlock optional run modifiers (e.g. "No Drills", "Double Fuel Cost") for challenge and replayability. *Depends on Story Enhancement — complete story arcs and effects before this.*
 
 ### Feel & Polish
-- **Onboarding / First-Run Tutorial** — a lightweight tooltip sequence for brand-new players: highlight the first click button, explain resources, nudge toward the first building. Skippable, never shown again after run 1. Critical for itch.io discoverability where players have no context.
 - **Keyboard Shortcuts** — number keys (1–5) to trigger resource clicks, hotkeys to switch tabs. Low-effort, high-reward for power users.
-- **Tab Bar Redesign** — restyle the two-row tab bar to look like physical file tabs (raised active tab, recessed inactive, clear visual separation between rows and content panel) rather than plain text buttons on a strip.
 
 ### Accessibility & Platform
 - **Mobile / Touchscreen Friendly** — responsive layout and touch-optimized controls so the game plays well on phones and tablets.
@@ -167,7 +165,6 @@ Features planned for future runs:
 - **Referral / Share Link** — one-click share that opens itch.io, for word-of-mouth growth.
 
 ### Ranks & Achievements
-- **Ranks in the Story** — make rank collecting feel meaningful through two layers: (1) **Rank lore** — story events and codex entries that explain what ranks *are* in-world: a mix of Earth HQ's official Colonial Designation System, Dave's own parallel classification framework, and the history of how the two systems diverged and occasionally conflict. Each rarity tier has a different origin (e.g. Common ranks are Earth-issued field designations; Legendary ranks were coined by Dave; secret ranks have no official record). (2) **Rank milestone story events** — specific story cards fire when the player collects their first rank of a given rarity, their first secret rank, or reaches a milestone count. Dave reacts to rank milestones in his own way. The narrative frames collecting ranks as the colony's growing reputation being observed — by Earth, by Dave, and possibly by something else.
 
 ### Story & World
 - **Story Effects on Gameplay** — story events should trigger real mechanical effects: a solar flare temporarily doubles energy, antimatter incident locks an upgrade for 60 seconds, Dave's calculations award a fuel bonus. Ties narrative to simulation and rewards players paying attention.
@@ -177,6 +174,11 @@ Features planned for future runs:
 ---
 
 ## Changelog
+
+### v1.4
+- ★ Ranks in the Story — 7 new story events fire as you collect ranks: The Designation System (first rank), Dave's Classification (first Uncommon), Notable (first Rare), Earth HQ Takes Notice (first Legendary), Classified (first Mythic), Pattern Noted (5 ranks), Dave's Comment (10 ranks). Each event adds lore explaining the CDS, Dave's parallel classification, and how your colony's growing reputation is being observed.
+- ★ Tab Bar Redesign — two-row tab bar now uses physical file-tab styling: active tab in the primary row visually connects to the panel below, inactive tabs are recessed and darker, row separator between secondary and primary rows. Cleaner visual hierarchy.
+- ★ Onboarding Tutorial — 5-step first-run tutorial shown to new players on first load. Covers resources, buildings, upgrades/ranks/XP, and the colony ship goal. Skippable; shown once, never again after completion.
 
 ### v1.3
 - ★ Rank Collection Achievements — 11 new achievements tied to the rank system: first of each rarity tier (Common through Mythic), milestone counts (5, 10, 20 ranks), Full Roster (all non-secret), and Classified Cleared (all 3 secret ranks). Rank collecting is now an explicit long-term goal.

@@ -771,6 +771,29 @@ const STORY_EVENTS = [
   {id:"sd4", trigger:(b,k,l)=>l>=2&&(b.commandmodule||0)>=1,                   title:"Dave's Calculations",   icon:"🧮",text:"Dave used 40% of the command module's compute overnight running calculations he did not log. When asked what they were for, he said: I was checking a route. He would not say to where. The fuel estimates that morning were oddly optimistic."},
   {id:"sd5", trigger:(b,k,l)=>l>=3&&(b.deepspaceantenna||0)>=1,               title:"The Signal Is Dave",    icon:"📡",text:"Signal analysis complete. The alien transmission detected 400 days ago exactly matches Dave's neural upload signature — same encoding, same frequency fingerprint. Dr. Chen sat down. Dave said: I was trying to get home. Nobody had thought to ask where home was."},
   {id:"sd6", trigger:(b,k,l)=>(b.cs_phase5||0)>=1,                            title:"Dave Chooses",          icon:"🌠",text:"The navigation core came online with destination coordinates already loaded. Nobody programmed them. They are perfect — the most efficient route to the most habitable system in range. Dave said: I chose this place. I have been choosing since before you found me. We are going exactly where we are supposed to go."},
+
+  // — Rank arc — triggers use xpData passed as 4th arg from the story loop —
+  {id:"sr1", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.length>=1,
+             title:"The Designation System",  icon:"⭐",
+             text:"Earth HQ's Colonial Designation System was established in 2187 to classify colonial performance across fourteen categories. Your first designation has been logged. Earth HQ does not send congratulations. They log. Dave logged it too. His annotation: one down."},
+  {id:"sr2", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="uncommon"),
+             title:"Dave's Classification",   icon:"🗂",
+             text:"Dave maintains a parallel designation system. It predates the CDS by an unspecified amount — he will not say how long. His categories do not map onto Earth HQ's. Your Uncommon designation corresponds to something he calls: emerging. He considers this a milestone. He did not elaborate on what it is emerging toward."},
+  {id:"sr3", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="rare"),
+             title:"Notable",                 icon:"📡",
+             text:"Director Vasquez forwarded a Rare designation to Earth HQ with a single addendum: this colony is exceeding projections. Earth HQ acknowledged receipt without comment. Dave added a note to the forwarding record. It read: I told you. When asked when he told them, Dave said: before you arrived."},
+  {id:"sr4", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="legendary"),
+             title:"Earth HQ Takes Notice",   icon:"🏛",
+             text:"Legendary designations are issued by committee at Earth HQ. The committee convenes four times per century. Your file reached their desk between scheduled sessions. Margaret noted this in the colony log as: unprecedented. Dave noted it as: expected. He has not explained the basis for that expectation."},
+  {id:"sr5", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="mythic"),
+             title:"Classified",              icon:"🕵",
+             text:"Mythic designations do not exist in the Colonial Designation System. There is no official record. Earth HQ's system cannot generate them. Dave generated this one. When asked for authorisation he said: the authorisation comes later. When asked who authorises it, Dave said: the same entity that authorised the ore. Nobody pressed further."},
+  {id:"sr6", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.length>=5,
+             title:"Pattern Noted",           icon:"🔢",
+             text:"Earth HQ's automated systems flagged the designation acquisition rate as anomalously high. Dave archived the flag with a note: not anomalous. Consistent with projections. The projections he referenced have not been published. Dr. Chen asked to see them. Dave said: you will write them yourself. She has started writing."},
+  {id:"sr7", trigger:(b,k,l,xd)=>xd&&xd.ownedRanks.length>=10,
+             title:"Dave's Comment",          icon:"🤖",
+             text:"Dave submitted an unsolicited entry to the colonial record: ten designations marks a colony that understands what it is capable of. The colonies that understood this became the ones that made it. He did not specify what made it means, or where. Margaret noted in her log: Dave is being cryptic again. The director read it. He fixed one thing."},
 ];
 
 const AMBIENT_EVENTS = [
@@ -1066,7 +1089,12 @@ const PEOPLE_CODEX = [
 // ── End Codex lore ────────────────────────────────────────────────────────────
 
 const PATCH_NOTES = [
-  {version:"v1.3", date:"Latest", changes:[
+  {version:"v1.4", date:"Latest", changes:[
+    "★ Ranks in the Story — 7 new story events fire as you collect ranks: first of each rarity tier (Common→Mythic), 5 ranks, 10 ranks. Lore covers the CDS, Dave's parallel classification, and what's watching.",
+    "★ Tab Bar Redesign — physical file-tab styling. Active tab connects to the panel below. Inactive tabs are recessed. Clear row separation.",
+    "★ Onboarding Tutorial — 5-step first-run guide for new players. Skippable, shown once.",
+  ]},
+  {version:"v1.3", date:"", changes:[
     "★ Rank Collection Achievements — 11 new achievements: first of each rarity tier (Common→Mythic), milestone counts (5/10/20 ranks), Full Roster, and Classified Cleared (all 3 secret ranks)",
     "✓ Tab Badge Behaviour — badges clear when you visit a tab; reappear only when new items arrive. Changed from count to '!' indicator.",
     "✓ Countdown Timer Layout Fix — building/upgrade cards always reserve the timer line. Shows countdown while waiting, swaps to green '✓ Available' when ready.",
@@ -1730,6 +1758,50 @@ function CodexTab({xpData, prestige}) {
   );
 }
 
+// ── Onboarding Tutorial ────────────────────────────────────────────────────
+const TUTORIAL_STEPS = [
+  {title:"Welcome to Space Base Race",
+   text:"Build a colony on a new planet. Generate resources, construct buildings, research upgrades, and launch a Colony Ship into deep space. Each successful launch makes the next run faster.",
+   tip:null},
+  {title:"Generate Resources",
+   text:"Tap ⚡ Energy to produce your first resource. Hold any button for continuous generation. Mining, Research, Habitat, and Fuel buttons unlock automatically as your colony grows.",
+   tip:"👆 The circular buttons just below the resource bar"},
+  {title:"Buy Buildings",
+   text:"The Build tab is your main control. Solar Arrays generate Energy automatically — buy them first so you don't have to click forever. Buildings compound: more buildings = exponentially faster production.",
+   tip:"👆 Open the Build tab in the first row above"},
+  {title:"Upgrades, XP & Ranks",
+   text:"Tab badges (!) mean something new is ready. Upgrades multiply production. The ★ button at the top is your XP Store — earn XP by playing and spend it on Ranks: persistent perks that carry over every run.",
+   tip:"👆 ★ button in the header, and the Upgrade/Knowledge tabs"},
+  {title:"The Goal",
+   text:"Reach Deep Space, build a Colony Ship across 5 phases, stockpile 10 million of every resource, then launch. You keep your XP and Ranks. Each planet gives a permanent +50% production bonus. The colony grows stronger with every run.",
+   tip:null},
+];
+function TutorialOverlay({step, total, onNext, onSkip}) {
+  const s = TUTORIAL_STEPS[step];
+  const isLast = step === total - 1;
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000bb",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,pointerEvents:"all"}}>
+      <div style={{background:"#0a1525",border:"2px solid #3a6a9a",borderRadius:14,padding:"22px 24px",maxWidth:380,width:"100%",boxShadow:"0 0 60px #0000009a",animation:"xpFly 0.25s ease-out forwards",opacity:1,transform:"none"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <span style={{fontSize:10,color:"#4a7a9a",letterSpacing:2,textTransform:"uppercase",fontWeight:600}}>{"Step "+(step+1)+" / "+total}</span>
+          <div style={{display:"flex",gap:3}}>{Array.from({length:total},(_,i)=>(
+            <div key={i} style={{width:6,height:6,borderRadius:"50%",background:i===step?"#4a9eff":i<step?"#2a5a8a":"#0d1c2e"}}/>
+          ))}</div>
+        </div>
+        <div style={{fontSize:15,fontWeight:700,color:"#a0c4ff",marginBottom:10,lineHeight:1.3}}>{s.title}</div>
+        <div style={{fontSize:12,color:"#b0c4d8",lineHeight:1.65,marginBottom:s.tip?10:16}}>{s.text}</div>
+        {s.tip&&<div style={{fontSize:10,color:"#5a9abf",background:"#060e1a",border:"1px solid #1a3a5a",borderRadius:6,padding:"5px 9px",marginBottom:14,fontStyle:"italic"}}>{s.tip}</div>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <button onClick={onSkip} style={{background:"none",border:"none",color:"#2a5a7a",fontSize:11,cursor:"pointer",padding:"4px 0",textDecoration:"underline"}}>Skip tutorial</button>
+          <button onClick={onNext} style={{padding:"8px 22px",background:"#0d2a4a",border:"1px solid #4a9eff",borderRadius:7,color:"#4a9eff",fontSize:12,cursor:"pointer",fontWeight:700}}>
+            {isLast?"Let's go! 🚀":"Next →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [res,           setRes]           = useState(()=>{
     const eq = XPStore.get().equippedRank;
@@ -1770,6 +1842,7 @@ function App() {
   const [totalSells,    setTotalSells]    = useState(0);
   const [offlineModal,  setOfflineModal]  = useState(null);
   const [paused,        setPaused]        = useState(false);
+  const [tutorial,      setTutorial]      = useState(()=>localStorage.getItem("sbr_tut")?null:0);
   const [ticker,        setTicker]        = useState(null);
   const [launchModal,   setLaunchModal]   = useState(false);
   const [logModal,      setLogModal]      = useState(false);
@@ -2058,7 +2131,7 @@ function App() {
     if(paused) return;
     const iv=setInterval(()=>{
       if(Date.now()<nextTickRef.current) return;
-      const pending=STORY_EVENTS.filter(ev=>!storyLog.find(s=>s.id===ev.id)&&ev.trigger(buildings,knowledge,layer));
+      const pending=STORY_EVENTS.filter(ev=>!storyLog.find(s=>s.id===ev.id)&&ev.trigger(buildings,knowledge,layer,xpData));
       let ev;
       if(pending.length>0){
         ev=pending[0];
@@ -2079,7 +2152,7 @@ function App() {
       nextTickRef.current=Date.now()+(3+Math.random()*3)*60*1000;
     },5000);
     return()=>clearInterval(iv);
-  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP,prestige]);
+  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP,prestige,xpData]);
 
   // Dave's Cousin — every 60s, pause a random owned building for 1s
   useEffect(()=>{
@@ -2470,6 +2543,12 @@ function App() {
       return np;
     });
   };
+  const advanceTutorial = () => {
+    const next = (tutorial||0) + 1;
+    if (next >= TUTORIAL_STEPS.length) { localStorage.setItem("sbr_tut","1"); setTutorial(null); }
+    else setTutorial(next);
+  };
+  const skipTutorial = () => { localStorage.setItem("sbr_tut","1"); setTutorial(null); };
 
   // Save / Load helpers
   const SAVE_VERSION = 1;
@@ -2589,6 +2668,9 @@ function App() {
 
   return (
     <div style={{fontFamily:"system-ui,sans-serif",minHeight:"100vh",background:"#080d1a",color:"#c8d8f0",padding:"10px 8px",maxWidth:720,margin:"0 auto"}}>
+
+      {/* Onboarding tutorial — first run only */}
+      {tutorial!==null&&<TutorialOverlay step={tutorial} total={TUTORIAL_STEPS.length} onNext={advanceTutorial} onSkip={skipTutorial}/>}
 
       {/* Layer transition cinematic */}
       {layerTransition&&(
@@ -2923,25 +3005,53 @@ function App() {
         </div>
       )}
 
-      {/* Tab bar — two rows */}
+      {/* Tab bar — two rows, file-tab style */}
       {(()=>{
         const tabLabel = t => t==="achievements"?"Achiev.":t==="knowledge"?"Know.":t==="launch"?"Launch":t==="ranks"?"Ranks":t==="stats"?"Stats":t==="codex"?"Codex":t.charAt(0).toUpperCase()+t.slice(1);
         const tabBadgeCur = t => t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:t==="ranks"?ranksBadge:0;
         const hasNewBadge = t => tabBadgeCur(t) > (tabLastSeen[t] || 0);
-        const rowStyle = ri => ({display:"flex",gap:1,padding:ri===0?"6px 4px 0":"0 4px"});
-        const btnStyle = (t,ri) => ({flex:1,padding:"5px 2px",border:"none",borderRadius:ri===0?"5px 5px 0 0":"0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:10,fontWeight:tab===t?700:400,whiteSpace:"nowrap",position:"relative"});
+        // File-tab button styles: active tab in row 1 visually connects to the panel below
+        const ACTIVE_BG = "#0d1525"; // close match to panel bg top
+        const btnStyle = (t, ri) => {
+          const active = tab === t;
+          if (active && ri === 1) return {
+            flex:1, padding:"7px 4px 8px", cursor:"pointer", whiteSpace:"nowrap", position:"relative",
+            border:"1px solid "+lt.border, borderBottom:"1px solid "+ACTIVE_BG,
+            borderRadius:"6px 6px 0 0", background:ACTIVE_BG,
+            color:"#a0c4ff", fontSize:10, fontWeight:700,
+            marginBottom:"-1px", zIndex:3,
+          };
+          if (active && ri === 0) return {
+            flex:1, padding:"5px 4px", cursor:"pointer", whiteSpace:"nowrap", position:"relative",
+            border:"1px solid "+lt.border, borderRadius:"5px 5px 0 0",
+            background:"#0a141e", color:"#7aaac8", fontSize:9, fontWeight:700, zIndex:2,
+          };
+          return {
+            flex:1, padding:ri===0?"5px 4px":"7px 4px 8px", cursor:"pointer", whiteSpace:"nowrap", position:"relative",
+            border:"1px solid #0d1c2c", borderRadius:"5px 5px 0 0",
+            background:"#030810", color:ri===0?"#2a4a62":"#3a6078", fontSize:ri===0?9:10, fontWeight:400,
+          };
+        };
         return (
-          <div style={{background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
-            {[TABS_ROW1, TABS_ROW2].map((row,ri)=>(
-              <div key={ri} style={rowStyle(ri)}>
-                {row.map(t=>(
-                  <button key={t} onClick={()=>setTab(t)} style={btnStyle(t,ri)}>
-                    {tabLabel(t)}
-                    {hasNewBadge(t)&&<span style={{position:"absolute",top:-4,right:-3,background:"#eb5757",color:"#fff",borderRadius:6,fontSize:8,padding:"0 3px",lineHeight:"13px",fontWeight:700}}>!</span>}
-                  </button>
-                ))}
-              </div>
-            ))}
+          <div style={{background:"#050c18",borderRadius:"10px 10px 0 0",border:"1px solid "+lt.border,borderBottom:"1px solid "+lt.border,padding:"6px 6px 0",position:"relative",zIndex:2}}>
+            {/* Row 0 — secondary tabs */}
+            <div style={{display:"flex",gap:3,marginBottom:4,paddingBottom:4,borderBottom:"1px solid #0d1c2c"}}>
+              {TABS_ROW1.map(t=>(
+                <button key={t} onClick={()=>setTab(t)} style={btnStyle(t,0)}>
+                  {tabLabel(t)}
+                  {hasNewBadge(t)&&<span style={{position:"absolute",top:-4,right:-3,background:"#eb5757",color:"#fff",borderRadius:6,fontSize:8,padding:"0 3px",lineHeight:"13px",fontWeight:700}}>!</span>}
+                </button>
+              ))}
+            </div>
+            {/* Row 1 — primary tabs, connects to panel */}
+            <div style={{display:"flex",gap:3,position:"relative",zIndex:3}}>
+              {TABS_ROW2.map(t=>(
+                <button key={t} onClick={()=>setTab(t)} style={btnStyle(t,1)}>
+                  {tabLabel(t)}
+                  {hasNewBadge(t)&&<span style={{position:"absolute",top:-4,right:-3,background:"#eb5757",color:"#fff",borderRadius:6,fontSize:8,padding:"0 3px",lineHeight:"13px",fontWeight:700}}>!</span>}
+                </button>
+              ))}
+            </div>
           </div>
         );
       })()}
