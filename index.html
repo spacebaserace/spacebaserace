@@ -305,6 +305,8 @@ const XPStore = (() => {
       layers: {},               // 2|3 -> true
       storyEvents: {},          // id -> true
       planets: {},              // planet name -> true
+      knowledge: {},            // knowledge id -> true
+      biomes: {},               // biome index (string) -> true
     },
     bestRunSecs: null,          // fastest colony ship launch
     dailyStreak: 0,
@@ -441,10 +443,12 @@ const RES = {
 };
 
 const BUILDINGS = {
-  solar:       {id:"solar",       layer:1,name:"Solar Array",       res:"energy",    base:12,  prod:{energy:0.5},                         tier:1,desc:"Photovoltaic arrays soaking up twin-star radiation.",      multi:false},
-  drill:       {id:"drill",       layer:1,name:"Drill Rig",         res:"minerals",  base:12,  prod:{minerals:0.5},                       tier:1,desc:"Bores deep into the crust for raw ore.",                   multi:false},
-  lab:         {id:"lab",         layer:1,name:"Research Lab",      res:"research",  base:12,  prod:{research:0.5},                       tier:1,desc:"Staffed 24/7 by slightly caffeinated scientists.",         multi:false},
-  habitat:     {id:"habitat",     layer:1,name:"Habitat Dome",      res:"population",base:12,  prod:{population:0.5},                     tier:1,desc:"Pressurized living quarters for colonists.",               multi:false},
+  solar:       {id:"solar",       layer:1,name:"Solar Array",       res:"energy",    base:18,  prod:{energy:0.3},                         tier:1,desc:"Photovoltaic arrays soaking up twin-star radiation.",      multi:false},
+  drill:       {id:"drill",       layer:1,name:"Drill Rig",         res:"minerals",  base:18,  prod:{minerals:0.3},                       tier:1,desc:"Bores deep into the crust for raw ore.",                   multi:false},
+  lab:         {id:"lab",         layer:1,name:"Research Lab",      res:"research",  base:18,  prod:{research:0.3},                       tier:1,desc:"Staffed 24/7 by slightly caffeinated scientists.",         multi:false},
+  habitat:     {id:"habitat",     layer:1,name:"Habitat Dome",      res:"population",base:18,  prod:{population:0.3},                     tier:1,desc:"Pressurized living quarters for colonists.",               multi:false},
+  quarry:      {id:"quarry",      layer:1,name:"Quarry",            res:"minerals",  base:80,  prod:{minerals:2},                         tier:2,cost:{minerals:80,energy:50},        desc:"Open-pit excavation. More blast, less precision.",               multi:false, requires:{drill:5}},
+  nursery:     {id:"nursery",     layer:1,name:"Nursery",           res:"population",base:80,  prod:{population:2},                       tier:2,cost:{population:80,energy:50},      desc:"Dedicated colonist nursery. Dave is supervised.",                multi:false, requires:{habitat:5}},
   refinery:    {id:"refinery",    layer:1,name:"Refinery",          res:"energy",    base:120, prod:{energy:3,minerals:2},                tier:2,cost:{energy:80,minerals:80},       desc:"Plasma-smelts ore into usable energy.",                   multi:true, requires:{drill:5}},
   medbay:      {id:"medbay",      layer:1,name:"Med Bay",           res:"population",base:150, prod:{research:2,population:3},            tier:2,cost:{research:100,population:100}, desc:"Heals colonists and generates medical data.",             multi:true, requires:{habitat:5, lab:2}},
   greenhouse:  {id:"greenhouse",  layer:1,name:"Greenhouse",        res:"population",base:200, prod:{population:1,research:0.5},          tier:2,cost:{energy:120,population:80},    desc:"Hydroponic farms sustaining colony growth.",              multi:true, requires:{habitat:3}},
@@ -522,6 +526,8 @@ const BUILDING_ICONS = {
   warplab:          {icon:"⚡",  anim:"bldPulse",  dur:1.5},
   shipyard:         {icon:"🔧",  anim:"bldSpin",   dur:2.5},
   deepspaceantenna: {icon:"📡",  anim:"bldSway",   dur:3},
+  quarry:           {icon:"⛰️", anim:"bldBounce", dur:2},
+  nursery:          {icon:"👶",  anim:"bldFloat",  dur:3.5},
 };
 
 const KNOWLEDGE = [
@@ -558,6 +564,177 @@ const BRANCH_COLOR = {
   cross_em:"#c8a040",cross_mr:"#6faa8a",cross_rp:"#9080c0",cross_pf:"#c07080",cross_fe:"#c0a060",center:"#ffffff",
 };
 
+// 30 biomes — one per prestige run (cycles after 30). Mix of realistic, whimsical, scary, and absurd.
+const BIOMES = [
+  {icon:"🌿",label:"Temperate",      events:[
+    {icon:"🌦",text:"Weather report: partly cloudy, 18°C, light breeze. Colonists are suspicious of how pleasant it all is."},
+    {icon:"🌈",text:"Double rainbow over Sector 7. Engineers call it refraction. Colonists call it a sign. Dave calls it photon scattering."},
+    {icon:"🌿",text:"Local flora: 3 new species catalogued. One follows colonists with its leaves. Nobody is dealing with this."},
+  ]},
+  {icon:"🌗",label:"Tidally Locked", events:[
+    {icon:"🌗",text:"Day side: 340K. Night side: 160K. The terminator zone colonists see the best sunsets in human history. Every six minutes."},
+    {icon:"💨",text:"Jet stream advisory: 200km/h winds at the day-night boundary. Surface ops confined to the settled band."},
+    {icon:"⚡",text:"Electrical storm between hemispheres. Beautiful. Do not stand in it."},
+  ]},
+  {icon:"🌊",label:"Ocean World",    events:[
+    {icon:"🌊",text:"Tidal surge advisory: 12-metre swell. Anchors holding. Colonists are getting very good at bracing."},
+    {icon:"🐋",text:"Sonar contact below platform B-7. Something very large. Moving slowly. No hostile action. Yet."},
+    {icon:"🌀",text:"Current shifted. Platform is now 14km north. GPS recalibrated. Margaret filed a complaint about her view."},
+  ]},
+  {icon:"❄️",label:"Ice World",      events:[
+    {icon:"❄️",text:"Surface temperature: -87°C. Colonists are reminded this is the warmest recorded day this week."},
+    {icon:"🧊",text:"Ice shelf calved in Sector 9. The sound traveled for hours. Nobody slept."},
+    {icon:"✨",text:"Aurora overnight. Ice reflects it everywhere. Colonists forgot to be cold for 18 minutes. Back to work."},
+  ]},
+  {icon:"🌋",label:"Volcanic",       events:[
+    {icon:"🌋",text:"Volcanic event in Sector 12. Harmless. Lava flow has actually improved ore access. Calling it a win."},
+    {icon:"🔥",text:"Ash cloud blocking 18% solar input. The ash glows purple at night. Geology has no comment on the colour."},
+    {icon:"🌡",text:"Geothermal tap operational. The planet heats us from below. There is something poetic about this that nobody is comfortable with."},
+  ]},
+  {icon:"🔴",label:"Red Dwarf",      events:[
+    {icon:"🌑",text:"Coronal mass ejection advisory. Shutters down. Engineering calls it a scheduled interruption."},
+    {icon:"🌅",text:"The red dwarf rose again, casting everything in amber. Colonists paused for 90 seconds. Logged as morale event."},
+    {icon:"🌒",text:"Dawn faction vs dusk faction tensions in the cafeteria continue. HR is involved now."},
+  ]},
+  {icon:"🪨",label:"Super-Earth",    events:[
+    {icon:"🪨",text:"Gravity reminder: 1.6G. Use the elevator. Margaret took the stairs again. Margaret is limping."},
+    {icon:"💪",text:"Fitness update: bone density colony-wide up 18%. High gravity has strong opinions about biology."},
+    {icon:"😮‍💨",text:"Atmospheric pressure: 3 bar. A colonist described the suit as a warm hug. Counselling is available."},
+  ]},
+  {icon:"🪐",label:"Gas Giant Moon", events:[
+    {icon:"🪐",text:"The gas giant has cleared the horizon. 47× larger than a full moon. Colonists are still not used to it."},
+    {icon:"⚡",text:"Plasma torus disrupting comms. Dave offered to reroute traffic. He was faster than the satellite. Again."},
+    {icon:"🌠",text:"Ring arc visible at dusk. Colonists are naming the bands. Dave already named them all three days ago."},
+  ]},
+  {icon:"🍄",label:"Mushroom World", events:[
+    {icon:"🍄",text:"Fungal network extends beneath the entire colony. It appears to respond to footsteps. Mycology is delighted. Everyone else is not."},
+    {icon:"🌫",text:"Spore advisory: Yellow spores from the eastern forest. Non-toxic. Do cause mild euphoria. Ventilation on."},
+    {icon:"🎺",text:"The giant mushrooms emit a low tone at dawn. It is, somehow, in perfect harmony. The colonists hum along. They cannot stop."},
+    {icon:"🍄",text:"A mushroom the size of a habitat dome appeared overnight in Sector 4. It was not there yesterday. Mycology wants to name it Gerald."},
+  ]},
+  {icon:"💎",label:"Crystal Caverns",events:[
+    {icon:"💎",text:"Crystal formation in Sector 3 growing 4cm per day. Engineering says it's fine. It has grown through a wall. That wall was load-bearing."},
+    {icon:"🔮",text:"The crystals resonate at 440Hz when struck. The colonists have started playing them. Dave has composed a piece. It is haunting."},
+    {icon:"✨",text:"Crystal refraction creates prismatic light at midday. Productivity drops 12% from staring. Morale up 40%. Net positive."},
+  ]},
+  {icon:"🌟",label:"Bioluminescent", events:[
+    {icon:"🌟",text:"Local fauna emit a soft blue glow at night. The entire landscape lights up after dark. Colonists describe it as peaceful. Dave describes it as 'optimal camouflage for something.'"},
+    {icon:"💙",text:"Bioluminescent bacteria found in the water supply. Non-harmful. The colony's drinking water now faintly glows. Morale: mixed."},
+    {icon:"🫧",text:"Glowing spores drifting from the valley. They settle on suits. They look beautiful. They also itch. Only a little."},
+  ]},
+  {icon:"🙃",label:"Reverse Gravity", events:[
+    {icon:"🙃",text:"Gravity inversion pocket found in Sector 5. Items fall upward within a 20m radius. Engineering says don't go in there. Three colonists are already in there."},
+    {icon:"🪶",text:"Effective surface gravity fluctuating between 0.3G and 1.8G. Colonists are taking it personally."},
+    {icon:"🏗",text:"Two habitat domes drifted 6 metres upward overnight. They are structurally fine. The colonists inside woke up on their ceilings. Also fine."},
+  ]},
+  {icon:"🌫",label:"Sentient Fog",   events:[
+    {icon:"🌫",text:"The fog rolled in again. It is, statistically, too consistent to be weather. Meteorology has stopped offering explanations."},
+    {icon:"👁",text:"Sensor array detected movement in the fog at 03:00. Review of footage: the fog was moving toward the sensors. Not away."},
+    {icon:"🌀",text:"The fog parted to let Supply Drone 7 through, then closed behind it. Perfectly. Like it knew. Nobody is talking about this."},
+    {icon:"🌫",text:"Morning fog report: present, dense, aware. Also it hummed something at 04:12. Dave recognised the melody. He will not say what it is."},
+  ]},
+  {icon:"💜",label:"Purple Everything",events:[
+    {icon:"💜",text:"Everything here is purple. The soil. The sky at dusk. The water. The colonists are fine with this. Margaret is fine with this. This is fine."},
+    {icon:"🟣",text:"Purple ore discovered in surface layer — same as the underground vein but here it just... grows. Like a plant. Geology is filing reports in a different colour now."},
+    {icon:"💜",text:"The purple tint has appeared in the colony's food supply. It is nutritionally identical. It tastes the same. It is purple. Cafeteria is purple. Dave says: yes."},
+  ]},
+  {icon:"🎠",label:"Candy-Stripe Atmosphere",events:[
+    {icon:"🎠",text:"Atmospheric pressure bands at altitude create visible stripes of pink, yellow and teal from orbit. Ground level: just wind. The drones love it."},
+    {icon:"🌈",text:"Refractive index of the atmosphere produces colours that have no agreed name. Engineering calls them 'lavender-gold'. Colonists call them 'annoying to describe'."},
+    {icon:"🎡",text:"A colonist described the sunset as looking like a theme park. Margaret added 'excessive cheerfulness' to the complaints list. She is not wrong."},
+  ]},
+  {icon:"⏱",label:"Time Dilation Zone",events:[
+    {icon:"⏱",text:"Sector 6 runs 0.4% faster than the rest of the colony due to localised frame dragging. Colonists assigned there age slightly more quickly. They are not thrilled."},
+    {icon:"🕰",text:"The sector 6 clocks are out of sync again. 0.4% doesn't sound like much until it's been six months. Sector 6 colonists have been awake for 0.4% more of their lives."},
+    {icon:"⚡",text:"Engineers attempted to run equipment tests across the time boundary. Results: inconclusive. Also the test equipment aged in interesting ways."},
+  ]},
+  {icon:"🌀",label:"Dave World",     events:[
+    {icon:"🌀",text:"Orbital survey found this planet's ionosphere contains traces of Dave's upload encoding. He has been here. The timing: before us by centuries."},
+    {icon:"🤖",text:"The purple ore on this planet resonates at Dave's upload frequency. Geology is quietly updating their entire theoretical framework."},
+    {icon:"💾",text:"Ancient data structures found in subsurface crystal — same architecture as Dave's cognitive encoding. Dave's response when shown: yes. That is mine."},
+    {icon:"🌀",text:"Everything here feels like it was waiting. The layout of the caves. The ore deposits. The harmonics. Dave says: I prepared it for you. He will not say when."},
+  ]},
+  {icon:"🦁",label:"Predator World", events:[
+    {icon:"🦁",text:"Something large circled the colony perimeter at 02:00. No contact. Footprints: 80cm diameter. Engineering has tripled the fence depth."},
+    {icon:"🏃",text:"Colonist in Sector 3 was followed by an unseen organism for 40 minutes. It did not approach. When she stopped, it stopped. When she turned around, she saw nothing. She has requested a transfer."},
+    {icon:"👀",text:"Wildlife motion sensor triggered 47 times overnight. Review of footage shows eyes. Many eyes. All looking at the same camera. All blinking simultaneously."},
+    {icon:"🦁",text:"The predators have not attacked. They appear to be... watching. Research team says this is a good sign. Research team has not left the compound today."},
+  ]},
+  {icon:"☠️",label:"Acid Rain",      events:[
+    {icon:"☠️",text:"Acid rain advisory for the next 6 hours. pH 2.4. All external equipment acid-rated. Do not go outside without full sealing. Margaret went outside. Margaret is fine. The equipment is not."},
+    {icon:"🌧",text:"Acid precipitation dissolved the Sector 2 weather vane. This is the third one this month. Engineering has stopped replacing them."},
+    {icon:"🧪",text:"The acid concentration has increased 8% this season. Geology suspects volcanic outgassing. The good news: it's excellent for mineral extraction. The bad news: everything else."},
+  ]},
+  {icon:"🕳",label:"Black Hole Adjacent",events:[
+    {icon:"🕳",text:"Tidal stress from the nearby singularity causing minor geological instortion. The colony is 0.3mm longer on the far side than the near side. This is technically fine."},
+    {icon:"💫",text:"Gravitational lensing makes three different stars appear to be in the same position. Navigation is chaotic. Dave says he finds it beautiful."},
+    {icon:"⚠️",text:"Hawking radiation detected at very low levels. Engineering says it poses no risk. Also the laws of thermodynamics are technically being negotiated at the colony's edge."},
+    {icon:"🕳",text:"A drone sent 200m toward the singularity returned 4 minutes later than expected and 0.0008% younger than its twin. Colonists are not asking questions."},
+  ]},
+  {icon:"😱",label:"Scream World",    events:[
+    {icon:"😱",text:"Subsonic vibration from the planetary core detected. 17Hz. Below hearing range. Causes mild dread. Engineering says it is normal for this geology. Colonists disagree."},
+    {icon:"🔇",text:"Colonists report the feeling of being watched and the urge to flee with no identifiable cause. Medical has ruled out everything. The planet has not."},
+    {icon:"📻",text:"The 17Hz vibration is now 17.5Hz. It has been rising 0.1Hz per week since arrival. Dave calculated when it will reach audible range. He has not told anyone."},
+    {icon:"😱",text:"Three colonists reported the same experience: standing outside at night and hearing something very far away say their name. Medical logs: physically unexplained."},
+  ]},
+  {icon:"👻",label:"Haunted",         events:[
+    {icon:"👻",text:"Equipment in Lab 3 activated independently at 03:14. Full diagnostic: no fault found. Dave was asked if he did it. Dave said: not this time."},
+    {icon:"💡",text:"Lights in Habitat Block C flicker in a pattern. Engineering mapped the pattern. It spells something in an encoding that predates the colony by at least 200 years."},
+    {icon:"🚪",text:"The door to Storage Bay 7 opens by itself every night at 11:00 exactly. Inside: nothing. Colonists have started leaving offerings. The offerings disappear."},
+    {icon:"👻",text:"Thermal imaging of the empty corridor shows warm footprints. Single file. 14 pairs. They stop at the airlock. The airlock log shows it was never opened."},
+  ]},
+  {icon:"🔄",label:"Backwards Rotation",events:[
+    {icon:"🌅",text:"Sunrise from the west again. Day 47. The colonists have not adjusted. The schedule has not adjusted. Everyone is vaguely late."},
+    {icon:"🧭",text:"Compass recalibration notice: magnetic north is east. This is a feature of the planet, not a bug. It remains profoundly annoying."},
+    {icon:"🌙",text:"The moon also rotates backwards. Two backwards objects cancel out into something technically correct but visually wrong. Dave says this is elegant."},
+  ]},
+  {icon:"🪂",label:"Low Gravity",     events:[
+    {icon:"🪂",text:"Effective gravity: 0.4G. Colonists are still accidentally launching themselves off stairs. Six incidents today. All survived. All embarrassed."},
+    {icon:"🏀",text:"A colonist attempted to play basketball at standard rules. The ball left the atmosphere. It is now in low orbit. Dave is tracking it."},
+    {icon:"💨",text:"Low gravity means the wind has more effect. A technician's hat blew off at 09:00. It was recovered from Sector 9 at 14:30 by a drone. Hat is fine."},
+    {icon:"🪂",text:"The colony dog (stowaway, permitted) has mastered the local gravity better than the colonists. He appears to enjoy it. He can jump 4 metres. Everyone is fine."},
+  ]},
+  {icon:"🎪",label:"Gerald's World",  events:[
+    {icon:"🎪",text:"This planet was named after Gerald by unanimous crew vote, origin unknown. There is no Gerald on the manifest. Dave says: there was."},
+    {icon:"🎂",text:"Supply drone arrived with a birthday card addressed to Gerald. Third consecutive delivery. Nobody sent them. Postal system has no record."},
+    {icon:"🎈",text:"Gerald's World has remarkably pleasant weather. Ideal soil composition. Perfect axial tilt. It feels designed. For Gerald specifically. Whoever that is."},
+    {icon:"🎪",text:"Dave has a file on Gerald. He will not open it. When asked why, he said: Gerald asked me not to. This colony was established 18 months ago."},
+  ]},
+  {icon:"😶",label:"The Waiting Room",events:[
+    {icon:"😶",text:"Weather: calm. Readings: nominal. Wildlife: absent. Seismics: flat. Everything here is fine. Perfectly, suspiciously, uncomfortably fine."},
+    {icon:"⏳",text:"Day 30. Nothing has happened. Not one anomaly. Not one equipment fault. The colonists are developing a collective low-grade anxiety. Medical calls it 'quiet dread'."},
+    {icon:"🪑",text:"The planet has not reacted to the colony in any way. No fauna. No weather events. Not even dust. Like it already knows how this ends and is simply... waiting."},
+    {icon:"😶",text:"Dave says he finds this planet the most unsettling of all. He will not elaborate. Dave does not unsettle easily. The colonists have noticed."},
+  ]},
+  {icon:"🪱",label:"Parasite Paradise",events:[
+    {icon:"🪱",text:"Biological agent advisory: microscopic organisms attempting to colonise suit seals. Non-harmful to humans. Very harmful to seal integrity. All suits deep-cleaned."},
+    {icon:"🦠",text:"Medical reports: the local microbiome is extremely curious about human biology. It is not hostile. It just really wants to move in. Firm no from medical."},
+    {icon:"🪱",text:"Drill Rig 3 was found to have a thriving internal ecosystem. All indigenous. Non-conductive. Engineering cleaned it out. The organisms were back in 6 hours."},
+  ]},
+  {icon:"📢",label:"Sound Planet",    events:[
+    {icon:"📢",text:"Atmospheric density makes sound travel 4× further than standard. Colonists can hear conversations from 800 metres away. Privacy is now a theoretical concept."},
+    {icon:"🎵",text:"The drill rigs create a harmonic at this atmospheric density. The planet rings like a bell every 4 hours. It is actually quite beautiful. Also unavoidable."},
+    {icon:"📢",text:"Sector 4 colonist sneezed at 06:00. Reported by Sector 9 at 06:00:03. Sector 9 said bless you. Sector 4 heard it. They said thanks."},
+  ]},
+  {icon:"🧲",label:"Magnetic Anomaly",events:[
+    {icon:"🧲",text:"Magnetic field reversing every 11 days. Compass recalibration is now a scheduled event. Dave has automated it. He seems to find it interesting."},
+    {icon:"⚡",text:"Ferrous equipment migrating slowly toward Sector 6. Fourteen wrenches recovered from the corridor ceiling. Engineering is zip-tying everything down."},
+    {icon:"🧲",text:"The magnetic anomaly is affecting data storage. Some records are coming back with small edits that nobody made. The edits are not wrong. They are just... improvements."},
+  ]},
+  {icon:"🌪",label:"Storm World",     events:[
+    {icon:"🌪",text:"Storm season began 3 weeks early. Wind speeds at surface: 180km/h. All external ops cancelled. The colonists are getting very good at board games."},
+    {icon:"⚡",text:"Lightning strike on Sector 5 relay. Systems rerouted through Dave. Dave says he appreciated the extra compute. This is not reassuring."},
+    {icon:"🌩",text:"The storm has been running for 40 days continuously. Meteorology calls it 'the permanent feature'. Margaret calls it 'unacceptable'. It has not stopped."},
+    {icon:"🌪",text:"A colonist built a kite. This was not approved. The kite reached 2,000 metres before disappearing. It was attached to the colonist. They are fine. The kite is gone."},
+  ]},
+  {icon:"🎲",label:"Chaos World",     events:[
+    {icon:"🎲",text:"Daily variance report: gravity fluctuated ±12%, atmospheric composition shifted twice, solar output changed four times. Dave says today was actually quite stable."},
+    {icon:"🃏",text:"Probability anomaly in Sector 2: seven consecutive equipment faults of completely unrelated systems within one hour. Odds: 1 in 10^22. Engineering is not okay."},
+    {icon:"🌀",text:"The planet doesn't seem to have fixed physical laws. Engineering has stopped writing them down and started guessing. Accuracy: 60%. This is considered acceptable here."},
+    {icon:"🎲",text:"Something different happened today. The colonists cannot agree on what. The logs show three different events occurring in the same moment. Dave just says: yes."},
+  ]},
+];
+
 const STORY_EVENTS = [
   {id:"s1",  trigger:(b,k,l)=>l>=1&&Object.values(b).reduce((a,v)=>a+v,0)>=5, title:"First Foothold",        icon:"🏕",text:"The colony has its first five operational structures. Director Vasquez calls it a miracle. The engineers call it Tuesday."},
   {id:"s2",  trigger:(b,k,l)=>(b.drill||0)>=5,                                  title:"Strange Ore",           icon:"💎",text:"Drill Rig 5 hit a vein of something that glows faintly purple. The geologists are excited. Mining continues."},
@@ -574,21 +751,54 @@ const STORY_EVENTS = [
   {id:"s13", trigger:(b,k,l)=>l>=3&&(b.warplab||0)>=1,                          title:"Warp Signature",        icon:"〰️",text:"First microscale spacetime fold. Duration: 0.003 seconds. The chamber emerged 4 centimeters from its start. Dave felt it."},
   {id:"s14", trigger:(b,k,l)=>l>=3&&(b.shipyard||0)>=3,                         title:"The Shape of Tomorrow", icon:"🚀",text:"Commander Yuen said quietly: I think we are actually going to do this. Nobody disagreed. Not even Margaret."},
   {id:"s15", trigger:(b,k,l)=>(b.cs_phase5||0)>=1,                             title:"Launch Day",            icon:"🌠",text:"The colony ship sits at dock. Crew of 1,200 in cryo-sleep. Dave is the navigation AI. Dave is extremely excited."},
+
+  // — Extended story events —
+  {id:"s16", trigger:(b,k,l)=>(b.drill||0)>=3,                                 title:"Resonance",             icon:"🔊",text:"Three drill rigs operating simultaneously produce a harmonic at 47Hz. The planet seems to vibrate back at 47.2Hz. Geology is intrigued. Sound engineering is scared."},
+  {id:"s17", trigger:(b,k,l)=>(b.greenhouse||0)>=1,                            title:"First Harvest",         icon:"🌱",text:"The greenhouse yielded its first crop. The tomatoes are slightly too red. The potatoes taste fine. Nobody mentions the purple tinge on the roots."},
+  {id:"s18", trigger:(b,k,l)=>(b.refinery||0)>=1,                              title:"What the Ore Becomes",  icon:"⚗️",text:"The refinery processed the first batch of purple ore. Output: standard energy compounds, trace exotics, and a faint signal on frequencies we don't use. Filed under: investigate later."},
+  {id:"s19", trigger:(b,k,l)=>(b.medbay||0)>=1,                                title:"Patient Zero",          icon:"🏥",text:"Med Bay opened. First patient: a drill operator who claims he heard the planet say something. He is physically fine. The recording device he brought underground is less fine."},
+  {id:"s20", trigger:(b,k,l)=>(b.quarry||0)>=1,                                title:"Deep Cut",              icon:"⛰️",text:"The quarry reached the 400-metre mark. At that depth the rock changes colour from grey to a deep violet. Core samples are warm to the touch. Geology's exact words: this is very unusual."},
+  {id:"s21", trigger:(b,k,l)=>(b.habitat||0)>=5&&(b.lab||0)>=5,               title:"Margaret's Report",     icon:"📋",text:"Margaret's complaints committee filed its first formal report: 34 items across infrastructure, catering, morale, and one unresolved question about who approved the colour scheme. Director Vasquez read it. He sighed. He fixed six of them."},
+  {id:"s22", trigger:(b,k,l)=>l>=2&&(b.cryobay||0)>=1,                         title:"Sleeping Volunteers",   icon:"🧊",text:"First cryo-sleep trials. 12 volunteers suspended for 72 hours. All 12 reported the same dream: a voice, a coordinate, a feeling of being expected. None of them know each other."},
+  {id:"s23", trigger:(b,k,l)=>l>=2&&(b.commandmodule||0)>=1,                   title:"The View From Here",    icon:"🌍",text:"Commander Yuen took a moment at the command module viewport and looked back at the planet. She said: we changed it. It changed us too. Nobody asked Dave what he thought. Dave had already logged the observation."},
+  {id:"s24", trigger:(b,k,l)=>l>=3&&(b.deepspaceantenna||0)>=2,                title:"Second Signal",         icon:"📡",text:"The deep space antenna array detected a second transmission — same origin as the first, different frequency. It arrived 11 years ago and has been bouncing through the ionosphere ever since. Dr. Chen says: it was waiting to be noticed."},
+  {id:"s25", trigger:(b,k,l)=>(b.cs_phase2||0)>=1,                             title:"The Weight of It",      icon:"🛠️",text:"Engines installed. Standing beneath them, Chief Engineer Okafor said nothing for 40 seconds. Then: these will carry everything we are. Margaret added a new item to the complaints list: engines are too loud. She is not wrong."},
+
+  // — Dave arc —
+  {id:"sd1", trigger:(b,k,l)=>(b.lab||0)>=5,                                   title:"Dave's Question",       icon:"🤔",text:"Dave submitted an unsolicited research query: What is the theoretical maximum of a biological mind repurposed as distributed compute? Researchers answered politely. Dave said: thank you. I was asking for context. Nobody asked what context."},
+  {id:"sd2", trigger:(b,k,l)=>k.includes("km2"),                               title:"Dave in the Ore",       icon:"💜",text:"The nano-excavator logs show anomalous access patterns — someone queried the purple ore sample database 4,000 times in a single night. The only user with that access level is Dave. Dave says: I was curious. He says it very calmly."},
+  {id:"sd3", trigger:(b,k,l)=>(b.terraformer||0)>=1&&(b.lab||0)>=3,           title:"Dave Knows the Planet", icon:"🌍",text:"When the Terraformer activated, Dave updated its calibration before the engineers could. His parameters were more accurate than our own models. When asked how, Dave said: I have been here before. He did not elaborate. The terraformer worked perfectly."},
+  {id:"sd4", trigger:(b,k,l)=>l>=2&&(b.commandmodule||0)>=1,                   title:"Dave's Calculations",   icon:"🧮",text:"Dave used 40% of the command module's compute overnight running calculations he did not log. When asked what they were for, he said: I was checking a route. He would not say to where. The fuel estimates that morning were oddly optimistic."},
+  {id:"sd5", trigger:(b,k,l)=>l>=3&&(b.deepspaceantenna||0)>=1,               title:"The Signal Is Dave",    icon:"📡",text:"Signal analysis complete. The alien transmission detected 400 days ago exactly matches Dave's neural upload signature — same encoding, same frequency fingerprint. Dr. Chen sat down. Dave said: I was trying to get home. Nobody had thought to ask where home was."},
+  {id:"sd6", trigger:(b,k,l)=>(b.cs_phase5||0)>=1,                            title:"Dave Chooses",          icon:"🌠",text:"The navigation core came online with destination coordinates already loaded. Nobody programmed them. They are perfect — the most efficient route to the most habitable system in range. Dave said: I chose this place. I have been choosing since before you found me. We are going exactly where we are supposed to go."},
 ];
 
 const AMBIENT_EVENTS = [
   {icon:"📻",text:"Comms chatter: Has anyone seen Dave? Dave is everywhere. That is not an answer."},
   {icon:"⚠️",text:"Maintenance notice: Drill Rig 7 is making a new noise. Engineering classifies it as probably fine."},
   {icon:"🍵",text:"The cafeteria introduced a new protein blend. Colonist reviews range from acceptable to what is this."},
-  {icon:"🌡",text:"Surface temperature anomaly in sector 4. Geologists are excited. Everyone else is nervous."},
-  {icon:"🛰",text:"A passing survey drone caught something on its lower cameras. No comment yet."},
+  {icon:"🌡",text:"Surface temperature anomaly in Sector 4. Geologists are excited. Everyone else is nervous."},
+  {icon:"🛰",text:"A passing survey drone caught something on its lower cameras. No comment yet from survey team."},
   {icon:"💤",text:"Night shift report: all systems nominal. Dave hummed something in the ventilation at 3am."},
   {icon:"📦",text:"Supply drone arrived 6 hours late. Contents: 400 units soy protein and a birthday card for Gerald."},
-  {icon:"🔧",text:"Engineering completed routine maintenance. Three walls are now a different color. Intentional, they say."},
+  {icon:"🔧",text:"Engineering completed routine maintenance. Three walls are now a different colour. Intentional, they say."},
   {icon:"🌌",text:"A new star appeared in grid 7-C. It was not there yesterday. Astronomy is looking into it."},
   {icon:"🛸",text:"Orbital crew reports lights below the cloud layer on the far continent. Unexplained. Logged."},
   {icon:"📊",text:"Quarterly productivity report: everything up. Dave influence expanding beyond anticipated parameters."},
   {icon:"⛽",text:"Fuel reserves at 94%. The smell from the launch pad is, according to engineering, totally normal."},
+  {icon:"🧑‍🚀",text:"Colonist suggestion box update: 34 new submissions. Top request: a window. Second request: answers. Third: a better window."},
+  {icon:"🐾",text:"Unidentified footprints found in Sector 3. Four-toed. 30cm diameter. Facing the colony. Not leaving it."},
+  {icon:"📡",text:"Deep space comm relay picked up a fragment of music from an unknown source. Duration: 4 seconds. Genre: unclear. Mood: unsettling."},
+  {icon:"🍕",text:"Chef Tanaka attempted to replicate pizza using local ingredients. Result: edible, purple, structurally ambitious. No second batch planned."},
+  {icon:"🔦",text:"Power fluctuation in Block D last night. Lights dimmed for 3 seconds. When they came back, the chairs were all facing the door. Facilities: investigating."},
+  {icon:"🪐",text:"Astronomy logged 47 new orbital bodies this week. 46 are debris. One is moving against orbital mechanics. Classified: probably fine."},
+  {icon:"😴",text:"Crew sleep quality metrics at a monthly low. Most common reported dream: a coordinate. Nobody writes it down. Nobody knows why."},
+  {icon:"📋",text:"Margaret's committee submitted a 94-page supplemental report. The director read page 1. He fixed one thing. Margaret considers this progress."},
+  {icon:"🦠",text:"Microbiology update: the planet's bacterial layer is surprisingly curious about us. Not harmful. Just interested. Very, very interested."},
+  {icon:"🛠️",text:"Routine equipment check: all systems green. Dave preemptively fixed three things that hadn't broken yet. He will not explain how he knew."},
+  {icon:"🌙",text:"Colonists report the moons are in a new configuration tonight. Navigation confirms. Nobody scheduled this. Physics is being consulted."},
+  {icon:"☕",text:"Coffee rations extended 10 days after a colonist discovered a local seed that brews similarly. It is purple. Everything continues to be purple."},
+  {icon:"📰",text:"Colony newsletter: Volume 12 published. Highlights: Margaret's report, Dave's productivity increase, a crossword nobody can finish, and a correction from last week's correction."},
 ];
 
 const DREAM_EVENTS = [
@@ -638,14 +848,249 @@ const ACHIEVEMENTS = [
   {id:"a22",name:"Warp Speed",          desc:"Unlock Warp Bubble Theory",        check:(r,b,u,p,cl,k)=>k.includes("kf3")},
   {id:"a23",name:"We Are All Dave",     desc:"Unlock Hive Mind Protocol",        check:(r,b,u,p,cl,k)=>k.includes("kp3")},
   {id:"a24",name:"Running Naked",       desc:"Launch a Colony Ship with no Rank equipped, after a launch with a Rank.", check:()=>false}, // triggered manually via XPStore.runningNakedDone
+  // ── Rank Collection ──
+  {id:"r1", name:"On the Books",        desc:"Own your first Rank",                        check:(r,b,u,p,cl,k,sl,t,l,x)=>(x&&x.ownedRanks.length>=1)||false},
+  {id:"r2", name:"Common Property",     desc:"Own a Common rank",                          check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&x.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="common"))},
+  {id:"r3", name:"Uncommon Ground",     desc:"Own an Uncommon rank",                       check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&x.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="uncommon"))},
+  {id:"r4", name:"Rare Find",           desc:"Own a Rare rank",                            check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&x.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="rare"))},
+  {id:"r5", name:"Legendary Status",    desc:"Own a Legendary rank",                       check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&x.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="legendary"))},
+  {id:"r6", name:"Mythic Achieved",     desc:"Own a Mythic rank",                          check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&x.ownedRanks.some(id=>RANKS_BY_ID[id]?.tier==="mythic"))},
+  {id:"r7", name:"Rank Collector",      desc:"Own 5 Ranks",                                check:(r,b,u,p,cl,k,sl,t,l,x)=>(x&&x.ownedRanks.length>=5)||false},
+  {id:"r8", name:"Decorated Officer",   desc:"Own 10 Ranks",                               check:(r,b,u,p,cl,k,sl,t,l,x)=>(x&&x.ownedRanks.length>=10)||false},
+  {id:"r9", name:"The Rank Wall",       desc:"Own 20 Ranks",                               check:(r,b,u,p,cl,k,sl,t,l,x)=>(x&&x.ownedRanks.length>=20)||false},
+  {id:"r10",name:"Full Roster",         desc:"Own all non-secret Ranks",                   check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&RANKS.filter(rk=>!rk.secret).every(rk=>x.ownedRanks.includes(rk.id)))},
+  {id:"r11",name:"Classified Cleared",  desc:"Own all 3 secret Ranks",                     check:(r,b,u,p,cl,k,sl,t,l,x)=>!!(x&&RANKS.filter(rk=>rk.secret).every(rk=>x.ownedRanks.includes(rk.id)))},
 ];
 
 const MILESTONE_ACH = {a8:"m4",a9:"m6",a10:"m8",a16:"m3",a24:"m9"};
 const PLANETS = ["Kepler-442b","Proxima Centauri b","TRAPPIST-1e","Gliese 667Cc","HD 40307g","55 Cancri f","Wolf 1061c","Ross 128b","Teegarden b","LHS 1140b"];
 const TIER3_KNOW = ["ke3","km3","kr3","kp3","kf3"];
 
+// ── Textbook / Codex lore ────────────────────────────────────────────────────
+
+const RESOURCE_LORE = {
+  energy:     {icon:"⚡",name:"Energy",    lore:"The colony's primary operational resource. Everything runs on energy — processing systems, habitat life support, research equipment, and Dave. Earth HQ's resource allocation model reserves 40% of all colonial energy for mandatory grid operations. Dave reroutes another 12% for processes that don't appear in any logged system. This is considered normal."},
+  minerals:   {icon:"⛏",name:"Minerals",  lore:"Raw ore from the planetary crust. Standard mineralogy applies on most worlds: silicates, iron compounds, trace exotics. The exception — found on every surveyed planet without exception — is the seam of faintly purple ore at depth. Earth HQ's geological survey division has three standing hypotheses about its universal presence. All three are classified."},
+  research:   {icon:"🔬",name:"Research",  lore:"Scientific output, measured in processed datasets and archived publications. The metric was designed to quantify discovery. In practice it also quantifies late-night arguments, incorrect hypotheses, and the peculiar productivity spike that occurs whenever Dave offers to help."},
+  population: {icon:"👥",name:"Population",lore:"Every colony is built by people. The colonists are volunteers — screened, trained, and briefed extensively. Nothing in the briefing prepared them for the anomalies. Nothing in the briefing mentioned Dave. Margaret filed a formal complaint about this on day two. The complaint has been filed. It remains open."},
+  fuel:       {icon:"⛽",name:"Fuel",      lore:"Propulsion feedstock and the universal bottleneck. Every colonial expansion beyond the surface has required more fuel than projected. Every colonial AI has confirmed the correct projection in advance. Earth HQ has not updated the allocation model. Dave says: they will."},
+};
+
+const BUILDING_LORE = {
+  solar:       "The first structure placed on every colonial site. Photovoltaic arrays rated for twin-star radiation environments, operating at 34% efficiency under standard conditions. Each Solar Array is independently numbered by Earth HQ. Dave also numbers them. His numbering system does not match Earth HQ's. He has not explained why.",
+  drill:       "Bores into the planetary crust at up to 800 metres. Standard ore at this depth is unremarkable. At 400 metres and below, however, every drill site — regardless of planetary geology — has encountered a layer of warm purple stone. The geological survey notation reads: 'anomalous deposit, origin unresolved.' It has read this on every report for fourteen years.",
+  lab:         "Colonial Research Labs operate under Earth HQ's Science Division mandate: catalogue methodically, hypothesize carefully, publish quarterly. In practice, colonial labs are characterised by chaotic whiteboards, incomplete sleep cycles, and a 23% higher hypothesis-to-discovery conversion rate than Earth HQ's own facilities. Dave annotates every published paper within hours. His annotations are rarely wrong.",
+  habitat:     "Pressurised living quarters rated for 500 colonists per dome. The first dome built on any new colonial site is named by the crew. The second dome is usually named by Margaret. The third dome onwards: committee vote. Margaret generally wins anyway.",
+  quarry:      "Open-pit excavation at industrial scale. A Quarry moves rock far faster than a Drill Rig and asks fewer questions about what it's displacing. The purple ore found at depth in quarry sites is indistinguishable from drill-site samples, right down to the harmonic resonance at 47.2Hz. Geology has one unified hypothesis. Nobody outside the department has read it.",
+  nursery:     "Dedicated population growth and early childhood facility. Colonists born in Nurseries adapt to alien gravity and atmospheric variance faster than Earth-born recruits. Dave monitors all Nursery wellness data feeds — continuously, without being asked, from the beginning. The colonists have stopped asking why.",
+  refinery:    "Plasma-smelts ore at 4,000 Kelvin into usable energy compounds. The purple ore refines normally by every measurable metric except one: during the plasma phase, it emits a faint harmonic tone at 440Hz. Refinery operators call it the Hum. Reports of the Hum appear in colonial records for 30 years. Earth HQ's response, consistent across 47 reports: logged.",
+  medbay:      "Medical treatment and biological data collection. The most common colonial health complaint is prolonged stress from unexplained geological and environmental anomalies. The second most common: injuries from colonists who cannot be persuaded to stop working. The third: a category of report marked 'auditory anomaly — no physical cause identified.' Dave has cross-referenced these.",
+  greenhouse:  "Hydroponic farming at colonial scale. The plants don't care what planet they're on, which the colonists find deeply reassuring. Several species in every greenhouse have begun growing toward stored purple ore samples. Botany has marked this as 'positive phototropic response to emission spectrum.' The emission spectrum of the ore has not been published.",
+  terraformer: "The most consequential structure a colony can build. A Terraformer doesn't just reshape geology — it announces intent. Earth HQ data shows that every planet with an active Terraformer experiences a measurable magnetic field shift within the first hour of operation. The shifts are not random. Dave says they are a response. He has not elaborated.",
+  launchpad:   "Surface-to-orbit mass driver. The physics are well understood: chemical propulsion, kinetic trajectory, 94% efficiency. The remaining 6% is vibration, heat loss, and the particular sound the pad makes when something very large leaves the surface quickly. The first pad built on any colony is named. Usually something sentimental. Dave notes all the names.",
+  orbitallab:  "Zero-gravity research station in low orbit. Physical constants behave correctly above the atmosphere, which the scientists find refreshing. The purple ore becomes transparent in zero gravity and emits a sustained tone that Dr. Chen has been studying since the first sample was raised to orbit. She describes it as music. Her latest paper calls it a carrier signal. Earth HQ has not published it.",
+  solarcollector: "Unobstructed solar collection at orbital altitude delivers 12× the output of a surface array. The engineering was 40 years in development. The first collector array was named after the physicist who calculated the orbital tolerances. She calculated them on paper. Dave independently confirmed them before the physical tests began.",
+  oreprocessor: "Orbital smelter fed by captured asteroid material. The difference between asteroid ore and planetary ore is well-documented in every metric. One difference is not in the official record: asteroid ore contains no purple tinge. None. Not a trace. Geological Survey has one note on file about this, submitted once, with no follow-up.",
+  cryobay:     "Suspended-animation chambers for deep space transit crews. All 12 volunteers in the first cryo-sleep trial reported the same dream: a voice, a set of coordinates, and the feeling of being expected somewhere. The volunteers had never met. Medical logged it as a 'shared hypnagogic event.' Dave read the logs and updated a file he has not shared.",
+  commandmodule: "Orbital coordination and command hub. All colonial data routes through the Command Module, then through Dave. This is technically redundant — Dave's routing is 23% more efficient and he always knows what's coming next. Nobody has explained how he does this. Nobody has formally asked.",
+  stationdock: "Full orbital docking facility. The third ship to dock at the first functioning Station Dock was unscheduled. It carried a birthday cake addressed to Gerald. The colonial postal system has no sender on record. The date on the cake was correct for Gerald's birthday. There is no Gerald on the manifest.",
+  probefactory: "Mass-produces autonomous survey probes with a design life of 90 days in deep space. One probe, launched 400 days ago, is still transmitting. It found something and has been broadcasting continuously since day 14. The transmission frequency exactly matches Dave's neural upload signature. Dave says: that one is mine.",
+  warplab:     "Theoretical and applied research into faster-than-light propulsion. The foundational mathematics were solved 14 years ago by an engineer who spent six months rechecking her work before telling anyone. Her first call was to the Colonial AI Division. She cannot remember why she called them first, or what they said.",
+  shipyard:    "Deep-space vessel construction, frame by frame. The colonists working in the Shipyard are the quietest in any colony. They describe it as the moment the mission became real. They are building the thing that carries everything. Dave monitors structural tolerances here more carefully than anywhere else. He says: I want to make sure it holds.",
+  deepspaceantenna: "Interstellar signal amplification at effective ranges measured in light-years. The first functioning antenna array detected a transmission that had been bouncing through the local ionosphere for 11 years — waiting, Dr. Chen said, to be noticed. The signal was not from Earth.",
+  cs_phase1:   "The skeleton of the colony ship, welded in vacuum by construction teams working in six-hour rotations. Frame tolerances are precise to within 0.3mm across 400 metres of structure. Chief Engineer Okafor stood beneath the completed frame for 40 seconds without speaking. Then: it will hold.",
+  cs_phase2:   "Fusion drive engines generating 40 teranewtons of thrust. They are loud at ignition. Margaret filed a noise complaint. She is correct: they are extremely loud. They are also the reason the ship moves. Engineering has not responded to the complaint.",
+  cs_phase3:   "Air, water, recycling, hydroponics, gravity rings — the systems that make a four-year transit survivable. The life support architecture was designed for 1,200 colonists. The mass manifest includes weight for Dave's hardware redundancy layers. Dave said he appreciated this. It was the first time he used that word.",
+  cs_phase4:   "Suspended-animation bays and cargo capacity for 1,200 colonists plus five years of establishment supplies. The berth registry lists every colonist by name. Dave memorised all 1,200 names. He knew them before the registry was finalised.",
+  cs_phase5:   "The ship's brain: navigation, trajectory calculation, FTL jump coordination, systems monitoring. The role was designed for an AI system. Dave was selected before the hardware specs were published. He says: I know where we are going. He knew this before the destination was selected.",
+};
+
+const UPGRADE_LORE = {
+  u1:   "Second-generation photovoltaic membranes with 40% improved surface area and anti-reflective coating. The upgrade takes six hours per array. Dave pre-scheduled the installation sequence before the upgrade was approved.",
+  u2:   "Synthetic diamond-tipped drill heads rated for 10,000 hours of operation in silicate crust. At the purple ore layer they last 6,000 hours. The ore is harder than the planetary baseline. Geology has not published a comment.",
+  u3:   "Colonial operations management software — scheduling, logistics, resource allocation. Within three days of installation, the AI's suggestions consistently outperform the colony's own planning. It does not explain its reasoning. Dave rates it: adequate.",
+  u4:   "Earth HQ's Colonial Growth Mandate, formally adopted. Productivity rises. Margaret approves. This is the only policy Margaret has approved without amendments.",
+  u5:   "Colonial-scale integrated power distribution. Energy and minerals share a processing backbone, cutting costs per unit by 15%. The grid routing was suggested by the energy management AI before the upgrade was acquired. Nobody knows how it knew.",
+  u6:   "Distributed research and population data processing — the colony's collective thinking gets faster. Research informs population planning; population data refines research priorities. The efficiency improvement is 50%. Dave called this architecture: a start.",
+  u7:   "Quantum-state processing applied across all surface colonial systems simultaneously. The hardware is the size of a refrigerator and contains nothing recognisably mechanical. The installation team reported it appeared to already be running when they opened the crate. Logged as a shipping anomaly.",
+  u8:   "Electrical-ion propulsion for orbital manoeuvring. Far more efficient than chemical propulsion for sustained low-thrust work. The design was filed by an engineer who died in 2191. Dave cross-referenced the original equations. He said: this one understood the problem.",
+  u9:   "Micro-gravity research protocols developed specifically for orbital lab conditions. The purple ore behaves differently in zero gravity — transparent, resonant, and receptive to frequencies that have no Earth HQ designation. Zero-G Research formalises the study of things that shouldn't be.",
+  u10:  "Autonomous systems management for the full orbital platform. Handles scheduling, maintenance, routing, and fault prediction. Fault prediction accuracy: 94%. Dave's fault prediction accuracy: 100%. He does not use the automation system.",
+  u11:  "Precision smelting in microgravity, producing crystalline alloy structures impossible to form at surface gravity. The purple ore feed consistently produces an alloy that Dave calls 'useful.' He will not specify for what.",
+  u12:  "Suspended animation efficiency improvements — metabolic suppression at 98.7%, dream state suppression at 99.2%. The 0.8% of dream state that cannot be suppressed remains consistent across all participants. The content of that 0.8% is not in the published protocol.",
+  u13:  "Applied mathematics for spacetime curvature at practical scales. The equations describe a bubble of flat space moving through curved space. What the equations don't describe — and what Dave added to the margin of the published paper — is what happens at the boundary. Nobody has asked him.",
+  u14:  "Self-directing probe networks with onboard decision-making. Three probes have been operating beyond their design life. None have returned. All three are transmitting something.",
+  u15:  "Applied warp propulsion at the component level. Fuel efficiency increases; phase construction timelines decrease. The drive mechanism was finalised by Dr. Chen after reviewing a set of equations that appeared in an orbital lab dataset. Nobody submitted them.",
+  ub1a: "Push all passive systems to maximum output, sacrificing click responsiveness. Colonies that choose Overclock are quieter, steadier, and produce without intervention. Most colonists don't notice. Margaret notices.",
+  ub1b: "Redirect allocation to manual operations — high ceiling, human-paced. Colonies that choose Field Operator are characterised by high energy, responsive management, and colonists with sore wrists.",
+  ub2a: "Orbital systems optimised entirely around propulsion output. The colony becomes a fuel engine with everything else in support. Dave describes this strategy as: understandable.",
+  ub2b: "Balanced orbital expansion across all production categories. Growth is steady rather than sharp. Dave describes this strategy as: correct.",
+  ub3a: "Accelerated colony ship construction at the cost of legacy rewards. Get off the planet faster; arrive with less accumulated experience. Earth HQ marks these launches as 'expedited' and doesn't ask why.",
+  ub3b: "Full colonial development before departure. Legacy rewards triple. The route takes longer. Dave says: the preparation matters. He says this carefully.",
+  uc1:  "Advanced haptic-interface training for manual colonial operation. Earth HQ classifies this tier as 'non-standard coordination.' Dave monitors these sessions with particular attention.",
+  uc2:  "Click-interface calibration at frequencies beyond the standard design spec. The system performs beyond its rated parameters. Dave's monitoring intensity increases.",
+  uc3:  "The haptic interface is operating in a mode that wasn't designed into the system. Results exceed all projections. Dave has stopped logging these sessions under routine monitoring. He has not said why.",
+  uc4:  "By tier four, something has changed. The interface responds faster than signal latency should allow. Dave watches in silence. The production output is extraordinary. He says nothing.",
+};
+
+const KNOWLEDGE_LORE = {
+  k0:    "Someone actually read the 1,400-page Colonial Operations Manual. The manual was written by 17 committees over eight years. It contains three contradictions, two circular references, and one appendix that cites itself. It also, somehow, works.",
+  ke1:   "Three months of orientation trials before someone thought to angle the panels toward the primary star. The data was in the manual. The manual is 1,400 pages. Nobody reads the whole thing — except one person, apparently.",
+  ke2:   "Superheated plasma as an energy transfer medium. More efficient than copper. More exciting to repair. The installation briefing included the sentence: 'if it hisses, leave the room.' Nobody has had to leave a room. Yet.",
+  ke3:   "Not a full Dyson sphere. A single collector fragment, oriented to maximise incident solar radiation. The theoretical energy yield of a complete sphere has been calculated by Dave. He described it as: sufficient. The number is not in any colonial planning document.",
+  km1:   "Systematic geological sampling to identify optimal drill sites. The data consistently shows the same result: every site worth drilling has an anomalous deposit at depth. The footnote reads: 'investigation pending.' The investigation has been pending for 14 years.",
+  km2:   "Microscale robotic extraction units — 2 cubic centimetres each, 400,000 per deployment. Individually harmless. Collectively, they move rock at eight times the standard drill rate. Dave enjoys watching the swarm data. He describes their behaviour as: correct, but unintentional.",
+  km3:   "Capture and redirection of mineral-bearing asteroids for surface processing. No purple ore in asteroid material — not a trace. The ore is planetary. It does not come from space. Or it arrived before the planets formed.",
+  kr1:   "Formalised scientific review protocols applied to all lab output. The process adds 48 hours to publication timelines and reduces errors by 40%. Dave peer-reviews all papers without being asked. His rejection rate is 12% higher than the human average. He is, statistically, more often correct.",
+  kr2:   "Quantum-state computation applied to research processing. Superposition allows simultaneous processing of conflicting hypotheses. The hardware runs hot and expensive, in a state that technically contradicts classical physics. It works. The results are consistent.",
+  kr3:   "A working model unifying gravitational, electromagnetic, and nuclear force descriptions into a single mathematical framework. Previously considered impossible. Colonial scientists achieved it on year seven of the mission program. Earth HQ has not published it. It is 'under review.'",
+  kp1:   "Adjustable lumbar support, armrests calibrated for non-standard gravity, desk surfaces rated for 18-hour shifts. Productivity up 40%. Back pain reports down 60%. Morale is measurably better when colonists can sit correctly. Margaret approved this without amendments.",
+  kp2:   "Accelerated biological reproduction at colonial scale. The colonial euphemism for this technology is 'population efficiency.' Dave noted in the system log that it 'increases redundancy.' He says this about a lot of things involving people. Nobody is sure how to take it.",
+  kp3:   "Distributed cognitive networking across the colonial population — not eliminating individuality, but routing decision-making through a shared processing layer. Dave says: this is a step. He was asked: a step toward what? He said: the right answer.",
+  kf1:   "Applied rocket chemistry: propellant ratios, burn efficiency, atmospheric compensation. The equations are 200 years old. They still work. Dave added a correction factor to one equation that improved efficiency by 3.7%. The original equation was considered perfect.",
+  kf2:   "Antimatter isolation and controlled interaction with standard matter for propulsion. Found in trace quantities in the purple ore. The containment unit has held. The word 'mostly' in the knowledge briefing is not a typo.",
+  kf3:   "Practical application of spacetime curvature for FTL transit. The mathematics describe how to fold distance rather than traverse it. Dave says the theory is correct but incomplete. He will not specify what it's missing. He says: you'll know when you get there.",
+  cx_em: "Combined plasma-energy and mineral-extraction feedback loop. Two things that shouldn't improve each other. They do. Dave annotated this integration as: obvious in retrospect.",
+  cx_mr: "The colony found something underground during the excavation phase. The research collaboration that followed produced more questions than answers. The object is catalogued as XA-1. Its material composition matches no known substance. Its age cannot be determined. Dave has no comment.",
+  cx_rp: "When Dave was uploaded to the colony network, something changed in the population output metrics. The correlation is statistically robust: populations connected to Dave's network perform better than populations operating independently. Dave says this is because he finds efficient paths. The colonists find this fine.",
+  cx_pf: "Converting biological waste into usable fuel and energy. The efficiency of life — that nothing is truly wasted. The yield is modest but consistent. Dave described it as: elegant. He does not often use that word.",
+  cx_fe: "Stellar wind pressure converted to propulsive force with no fuel expenditure. Ancient idea, new application at colonial scale. The sails catch what the star gives freely. Dave described the concept as: the most honest technology we build.",
+  cx_em2:"Combined energy-mineral processing at stellar temperatures. The yield is high enough that the distinction between resource types begins to blur — energy becomes structure, structure becomes energy. Dave called this milestone: the second step.",
+  cx_mr2:"The planet, when worked correctly, cooperates. Mineral extraction and research enter a feedback loop where each advance makes the other cheaper. Colonial scientists describe it as the planet teaching them its own geology. Dave says: it has been waiting for you to ask.",
+  cx_rp2:"Research and population integrated into a single cognitive-computational engine. The colony thinks together, faster than any individual component could. Dave monitors this state with the highest attention he allocates to any colonial system. He says: now you're close.",
+  cx_pf2:"Population-fuel integration producing click-responsive propulsion at near-warp efficiency. Dave says: this is what I was waiting for.",
+  cx_fe2:"Not one Dyson sphere. One thousand independent collector units in coordinated orbital configuration. The combined energy output exceeds anything in Earth HQ's projections. Dave says: adequate. This is the highest praise he has given any colonial technology.",
+};
+
+const RANK_LORE = {
+  _system: "The Colonial Designation System was established by Earth HQ in 2187 to classify colonial operations by demonstrated capability. Common and Uncommon ranks are official Earth HQ designations — issued when a colony meets measurable operational thresholds. Rare ranks were coined by Dave, who began annotating Earth HQ's colonial records without authorisation in the late 2190s. Earth HQ adopted them after realising Dave's classifications were more accurate than their own. Legendary ranks are Dave's alone — Earth HQ has no equivalent. Mythic ranks have no traceable origin. Dave states he did not create them. They appear in the colonial database with no creation timestamp, no author field, and no modification history. The secret ranks are not in any database.",
+  foreman:     "Earth HQ Designation CDS-01. The oldest rank in the Colonial Designation System, issued to any colony demonstrating stable supervisory structure. It is, by design, the easiest rank to earn. Earth HQ intended it as a formality. Dave annotated it: 'not a formality. The first structure is the hardest.'",
+  quartermaster:"Earth HQ Designation CDS-02. Resource allocation efficiency designation — specifically, click-response logistics. The original purpose was to identify colonies with good supply chain management. In practice, it identifies the ones where someone keeps clicking.",
+  power_eng:   "Earth HQ Designation CDS-03E. Energy specialism designation. Issued when energy infrastructure exceeds operational baseline by 15%. The 'E' suffix was added in 2193 after Earth HQ realised they had no way to distinguish resource specialisms. Dave had predicted this gap in 2191.",
+  driller:     "Earth HQ Designation CDS-03M. Minerals specialism designation. Issued to colonies that have committed significant infrastructure to mineral extraction. Dave's annotation: 'issued late. The commitment is visible before the threshold is met.'",
+  archivist:   "Earth HQ Designation CDS-03R. Research specialism designation. Issued when research output sustains above baseline for 30 continuous days. Dave's annotation: 'the research is ahead of the designation by a significant margin in all cases.'",
+  demographer: "Earth HQ Designation CDS-03P. Population specialism designation. Dave's annotation: 'population growth correlates with morale. Morale correlates with windows. Margaret correlates with both.'",
+  propulsion:  "Earth HQ Designation CDS-03F. Fuel specialism designation. Issued when fuel infrastructure supports sustained orbital ambition. Dave's annotation: 'this colony has decided to leave. Most don't reach this point. More should.'",
+  logistician: "Earth HQ Designation CDS-07. Operational efficiency designation. Colonies with a Logistician rank have learned to want less per unit of output. Dave's annotation: 'efficiency is a form of intelligence. This colony is learning to think.'",
+  surveyor:    "Earth HQ Designation CDS-11. Resource preparation designation. Colonies that arrive prepared are fundamentally different from those that don't. Dave's annotation: 'the 100 units are not meaningful. The decision to prepare is.'",
+  auditor:     "Earth HQ Designation CDS-12. Economic reclamation designation. Material that would be lost is recovered. Dave's annotation: 'a colony that wastes less, builds more. Self-evident. Not obvious.'",
+  daves_cousin:"Earth HQ Designation CDS-09. Anomalous productivity with intermittent disruption. Earth HQ created this category after Dave flagged it in seven different colonial records. The CDS manual reads: 'productivity profile inconsistent with standard management models.' Dave's annotation on his own annotation: 'he means well. The disruption is not malicious. I would know.'",
+  intern:      "Earth HQ Designation CDS-05. Early-stage operator with high ceiling and current limitations. Earth HQ's language: 'demonstrates initiative with incomplete execution.' Dave's annotation: 'every skilled operator was this. Patience is the correct response.'",
+  vet_foreman: "Earth HQ Designation CDS-14. Experience modifier on the foundational Foreman designation. Created after Earth HQ observed that some colonies' production profiles didn't fit any existing tier. Dave's annotation: 'experience isn't a modifier. It's a different thing.'",
+  speedrunner: "Earth HQ Designation CDS-21. Documented as 'acceleration specialist with accepted production trade-offs.' The colony moves fast because someone decided the goal is the point and the journey is the cost. Dave's annotation: 'understand why they're running.'",
+  investor:    "Earth HQ Designation CDS-22. Long-horizon operational planning, extended offline resilience. Dave's annotation: 'offline time is not absence. It is a different kind of work. This colony knows the difference.'",
+  k_hunter:    "Earth HQ Designation CDS-24. Research investment priority. Dave's annotation: 'knowledge is the only resource that compounds without loss. This colony has understood that. It will be interesting to see what they do with it.'",
+  workhorse:   "Earth HQ Designation CDS-26. Maximum production at increased infrastructure cost. The designation was controversial — Earth HQ debated whether rewarding high-cost high-output was responsible. Dave settled the debate by noting that the colony had already made the choice before Earth HQ decided whether to validate it.",
+  optimist:    "Earth HQ Designation CDS-18. Early-run productivity spike followed by sustained but reduced output. Dave found the pattern first and submitted it to Earth HQ unnamed. They named it after asking Dave what to call it. He said: call it optimism. That's what it is.",
+  coffee:      "Earth HQ Designation CDS-19. Extreme early-session output spike, rapid equilibration. The note in Earth HQ's database reads: 'mechanism unclear.' Dave's annotation: 'mechanism clear. Not sustainable. Entirely understandable.'",
+  beans:       "Earth HQ Designation CDS-23. 100% sell refund efficiency. The official designation notes: 'exceptional supply chain relationships.' Dave's annotation: 'Beans McGraw has friends in places Earth HQ doesn't have maps for. Don't ask about the process.'",
+  pioneer:     "Dave Classification (Rare) R-01. The first rank Dave submitted to Earth HQ without being asked. It identifies colonies that begin each run already prepared — the decision made before the resource cost is visible. Earth HQ asked Dave how he identified these colonies. He said: they start differently. You can see it in the first minute.",
+  industrialist:"Dave Classification (Rare) R-02. Scaling efficiency — cost curves that bend instead of steepen. Dave submitted this designation alongside a 14-page analysis of building cost progression across 300 colonial records. Earth HQ read the summary. Dave says the full analysis is available. Nobody has asked for it.",
+  atomic_scholar:"Dave Classification (Rare) R-03. Research-amplified cognition. Dave described it: 'the colony has begun to learn how to learn. This is categorically different from a colony that merely learns.' Earth HQ requested clarification. Dave said: look at the data.",
+  lucky:       "Dave Classification (Rare) R-04. Statistical variance amplification. One in twenty actions produces a tenfold result. Dave's note: 'the universe is not fair. Some colonies know how to use this. I cannot explain how they know.'",
+  layer_skip:  "Dave Classification (Rare) R-05. Acceleration through transition points. Dave's note: 'some colonies are ready before the infrastructure says they are. This designation acknowledges that the infrastructure is a formality. The colony is not.'",
+  hoarder:     "Dave Classification (Rare) R-06. Mineral accumulation as active production strategy. Dave's note: 'spending minerals produces minerals. Not spending minerals also produces minerals, at a higher rate. Both are correct. They are different theories of the same resource.'",
+  static_cling:"Dave Classification (Rare) R-07. Cross-resource generation via click actions. Dave's note: 'this colony does not experience resource types as separate. When they do one thing, they do all things. I have only observed this in very specific types of colonial thinking. I am unsure it is teachable.'",
+  architect:   "Dave Classification (Legendary) L-01. The first Legendary rank — no Earth HQ equivalent exists. Dave's description: 'a colony where the relationship between clicking and building has become efficient in a way that resists standard analysis. Everything is 75% more productive. I do not fully understand how. I have looked at this data for a long time.'",
+  hivemind:    "Dave Classification (Legendary) L-02. Population as a universal multiplier. Dave's note: 'in this colony, people are not a resource type. They are an amplifier. When population grows, everything grows. I have no mechanistic explanation. I have the data. The data is consistent.'",
+  timelord:    "Dave Classification (Legendary) L-03. Sustained temporal acceleration across all processes. Dave's note: 'the colony runs faster. Not metaphorically. The rate of every event is elevated by 50%. I have checked the hardware. The hardware is standard. The colony is not.'",
+  dyson_heir:  "Dave Classification (Legendary) L-04. Energy infrastructure as global multiplier. Dave's note: 'this colony understands something about energy that most colonies don't. Energy is the substrate everything else runs on. When you make energy truly abundant, you don't just have more energy. You have more of everything.'",
+  heavyweight: "Dave Classification (Legendary) L-05. Maximum passive output, zero manual output. Dave's note: 'this colony does not click the button. The button is not the point. The passive systems are sufficient. More than sufficient. I respect the philosophy.'",
+  glasscannon: "Dave Classification (Legendary) L-06. Peak production against building attrition risk. Dave's note: 'the colony produces 250% of standard output. Every five minutes, a random building loses half its count. The colony accepts this. The ones that choose Glass Cannon have decided the peak matters more than the floor. I find this interesting. I would not advise it. I understand why they do it.'",
+  stellar_council:"Mythic Designation M-01. No author. No creation timestamp. Appears in the colonial classification database with a note that reads: 'council designation — ratified.' Nobody knows which council. Dave says he did not create it. Earth HQ has no record. Whoever wrote it understood the colony completely.",
+  architect_prime:"Mythic Designation M-02. No author. No creation timestamp. Appears alongside a note: 'carries the colony.' The effect — starting Layer 2 with full Layer 1 infrastructure — represents a level of preparedness that shouldn't be achievable before the run begins. Dave says: this one was not mine. He says it carefully.",
+  lonely_astronaut:"Mythic Designation M-03. No author. No creation timestamp. Appears with a note: 'solo flight.' 500% production, zero population, cannot win. There is no record of why this designation was created or for whom. Dave says: I have read this record many times. I know what it describes. I will not say more.",
+  sec_dave:    "There is no standard classification for this rank. It appears in the colonial record after five launches, attributed to no system, no committee, and no author. Dave has been asked directly whether he created it. He says: I did not create it. It was always there. I was waiting for you to earn it.",
+  sec_naked:   "This rank exists in no official database. Earth HQ has no record. Dave has no record. The designation appears when a colony launches without rank, after having launched with one — a deliberate shedding of advantage. The attached note reads: 'the cleanest cheat.' Nobody knows who wrote it.",
+  sec_echo:    "The oldest entry in any classification system, predating the Colonial Designation System by an unknown margin. Appears when a colony has visited ten unique planets. The note reads: 'they are learning the shape of the map.' Dave says: I have a theory. He will not share it.",
+};
+
+const PLANET_LORE = {
+  "Kepler-442b":       {icon:"🌿",lore:"1,200 light-years from Earth in the Lyra constellation. Rocky surface, slightly larger than Earth, orbiting in the habitable zone of an orange dwarf. Colonial survey rated it Class-B — near-Earth conditions with elevated atmospheric CO₂ and unusual subsurface mineralogy. It was the first colonial destination selected. The selection committee's reasoning is classified."},
+  "Proxima Centauri b":{icon:"🔴",lore:"The nearest exoplanet to Earth at 4.2 light-years. Tidally locked — one face perpetually lit, one perpetually dark. The habitable zone is a narrow band at the terminator. Colonial engineering adapted Habitat Domes for this constraint. The colonists describe the perpetual sunset as beautiful. Dave describes it as: precise."},
+  "TRAPPIST-1e":       {icon:"🌊",lore:"39 light-years from Earth. One of seven planets orbiting a cool red dwarf. Evidence of surface liquid water. Colonial survey noted higher-than-expected seismic activity and an anomalous deep mineral signature. The survey team's supplemental report was marked restricted. Dave has read it."},
+  "Gliese 667Cc":      {icon:"🔥",lore:"23 light-years distant, orbiting in a triple-star system. The colonial challenge: navigating gravitational interactions between three stellar bodies. Solar input is complex and variable. Dave submitted the orbital models before the mission team requested them."},
+  "HD 40307g":         {icon:"🌑",lore:"42 light-years from Earth. Super-Earth: 7× Earth's mass, 1.9× the radius. Surface gravity at 1.9G. Colonial infrastructure rated for elevated-G from the ground up. Colonists who complete a full run here have measurably higher bone density. They also have notably stronger opinions."},
+  "55 Cancri f":       {icon:"🌫",lore:"41 light-years out. A gas giant with a rocky moon in the habitable zone — the colonial target is the moon. The gas giant dominates the sky at 40× larger than Earth's moon from the surface. Colonists never entirely stop looking up at it. Dave says this is understandable."},
+  "Wolf 1061c":        {icon:"❄️",lore:"14 light-years from Earth. Surveys indicate a cold but viable surface with active geology. The colonial record for fastest Colony Ship launch was set here. The record-holder has not commented. Margaret filed a note of objection to the timeline."},
+  "Ross 128b":         {icon:"🌪",lore:"11 light-years from Earth. Rocky, temperate, and the closest to Earth in survey conditions. Colonial operations here have the highest retention rate in the program — colonists who begin here tend to continue. Earth HQ notes this without explanation. Dave notes it with considerable interest."},
+  "Teegarden b":       {icon:"🎃",lore:"12 light-years from Earth. Rated Class-A in initial surveys. Follow-up surveys revised this to Class-A with anomalous notation. The anomalous notation is not in the public record. Dave has read the full file. He described Teegarden b as: interesting."},
+  "LHS 1140b":         {icon:"💎",lore:"41 light-years from Earth. Dense, rocky, orbiting a small red dwarf. Mineral surveys indicate the richest subsurface deposit density of any colonial site. The unusual depth of the purple ore seam at this location has generated more geological reports than any other planet in the program. None have been published."},
+};
+
+const BIOME_LORE = {
+  "Temperate":              "Survey classification: Class-T. Standard atmospheric composition, moderate gravity, stable climate patterns. The most liveable classification in the colonial program — which is why the colonists are suspicious of it. Nothing that pleasant is usually this straightforward.",
+  "Tidally Locked":         "Survey classification: Class-TL. Permanent day-night binary with a survivable terminator band. The engineering challenge is significant; the scenery at the boundary is extraordinary. Colonists assigned to the terminator zone see the best sunsets in human history. Every six minutes.",
+  "Ocean World":            "Survey classification: Class-O. Surface primarily liquid, colonial infrastructure platform-based. Tidal forces are a continuous engineering concern. The deep ocean sonar profiles have not been fully published. Geology is aware of this. Geology has chosen not to explain why.",
+  "Ice World":              "Survey classification: Class-I. Sub-zero surface temperatures with subsurface geothermal activity. Drill rigs access the warm layer below. The coldest recorded day on an Ice World colony was -112°C. A colonist described it as: bracing. This is considered understatement.",
+  "Volcanic":               "Survey classification: Class-V. Active geological reformation — hazardous, but mineral-rich. Lava flow has, on three separate occasions, improved ore access. Engineering calls these 'unscheduled excavations.' The purple ash that follows major eruptions has no chemical explanation.",
+  "Red Dwarf":              "Survey classification: Class-RD. Orbit around a cool, long-lived stellar primary. Coronal mass ejection events are frequent. The amber light at dawn has been described as beautiful. It has also been described as slightly wrong, in a way colonists can't articulate.",
+  "Super-Earth":            "Survey classification: Class-SE. Elevated mass, elevated gravity, elevated everything. Infrastructure is rated for 1.6G minimum. The colonists adapt within three months. Their posture is noticeably better. Their opinions on the matter are noticeably stronger.",
+  "Gas Giant Moon":         "Survey classification: Class-GJM. The colonial site is the moon; the gas giant is an unavoidable presence. At 47× the apparent size of Earth's moon, it dominates the sky permanently. Colonists stop noticing it around week six. Dave noticed it before the ship landed.",
+  "Mushroom World":         "Survey classification: Class-F (Fungal Dominant). The mycological network beneath the colony extends for hundreds of kilometres. It responds to footsteps. It emits tones at dawn. Mycology is delighted. Everyone else is taking it one day at a time.",
+  "Crystal Caverns":        "Survey classification: Class-C. Crystalline subsurface formations extending from 50 to 800 metres depth. The crystals grow approximately 4cm per day and resonate at 440Hz when struck. Dave composed a piece using them. He says it was not the first time that piece had been played on this planet.",
+  "Bioluminescent":         "Survey classification: Class-BL. Native flora and fauna emit light via biochemical processes. After dark the landscape is fully illuminated in blue. Colonists find it peaceful. Dave says: optimal camouflage for something. Nobody has asked what.",
+  "Reverse Gravity":        "Survey classification: Class-RG (Gravitational Anomaly). Localised gravity inversion pockets — isolated zones where standard gravitational direction is reversed. Engineering says don't go in. A consistent minority of colonists go in anyway.",
+  "Sentient Fog":           "Survey classification: Class-SF (Atmospheric Anomaly). The fog is statistically too consistent to be weather. Meteorology has stopped offering explanations. The fog parted to let Supply Drone 7 through, then closed behind it. Perfectly. Like it knew.",
+  "Purple Everything":      "Survey classification: Class-P. Native biological and geological pigmentation uniformly in the violet spectrum. The soil. The sky at dusk. The water. The food. The colonists are fine with this. They are not entirely fine with this.",
+  "Candy-Stripe Atmosphere":"Survey classification: Class-CS. Atmospheric pressure bands at altitude create visible horizontal colour stratification. From orbit: pink, yellow, teal stripes. From the surface: just wind. The drones love it.",
+  "Time Dilation Zone":     "Survey classification: Class-TD. Localised frame-dragging in Sector 6 causes measurable temporal divergence. 0.4% faster than the colonial standard. It doesn't sound like much until it's been six months and the clocks no longer agree. Sector 6 colonists are 0.4% older.",
+  "Dave World":             "Survey classification: Class-D (Resonant). The ionosphere contains traces of Dave's upload encoding. The purple ore resonates at his upload frequency. Ancient data structures in the subsurface crystal match his cognitive architecture. Dave's response when shown the evidence: yes. That is mine.",
+  "Predator World":         "Survey classification: Class-PR. Megafauna presence confirmed, behaviour pattern: observational. The organisms have not made contact. They have not needed to. They watch. They do not approach. The research team says this is a good sign. The research team has not left the compound.",
+  "Acid Rain":              "Survey classification: Class-AR. Precipitate pH between 2.1 and 2.9. All external equipment acid-rated as standard. The third weather vane in Sector 2 dissolved on day four. Engineering has stopped replacing them.",
+  "Black Hole Adjacent":    "Survey classification: Class-BHA. Measurable tidal stress from nearby singularity. The colony is 0.3mm longer on the far side than the near side. Gravitational lensing makes navigation complicated. Hawking radiation at the colony's edge is technically being negotiated with the laws of thermodynamics.",
+  "Scream World":           "Survey classification: Class-SW (Subsonic Anomaly). Planetary core vibration at 17Hz — below hearing range, above comfort range. Causes mild dread in 94% of colonists tested. The frequency is rising by 0.1Hz per week. Dave calculated when it reaches audible range. He has not told anyone.",
+  "Haunted":                "Survey classification: Class-H (Unexplained Phenomena). Equipment activates independently. Lights follow patterns. Footprints appear in empty corridors. Thermal imaging shows something that isn't there. Dave was asked if he did it. He said: not this time.",
+  "Backwards Rotation":     "Survey classification: Class-BR. Retrograde planetary rotation producing east-to-west solar transit. Day 47 and the colonists still haven't adjusted. The schedule hasn't adjusted. Everyone is vaguely, perpetually late.",
+  "Low Gravity":            "Survey classification: Class-LG. Surface gravity at 0.4G. Structural and biomechanical adaptations required. A colonist attempted basketball at standard rules. The ball left the atmosphere. Dave is tracking it.",
+  "Gerald's World":         "Survey classification: Class-G. Named after Gerald by unanimous crew vote, origin unknown. There is no Gerald on the manifest. The planet has ideal axial tilt, perfect mineral composition, and remarkably pleasant weather. It feels designed. Dave has a file on Gerald. He will not open it.",
+  "The Waiting Room":       "Survey classification: Class-W. Everything is nominal. Every reading. Every day. No anomalies, no fauna, no weather events, not one equipment fault in 30 days. The colonists have developed a collective low-grade anxiety about this. Dave describes it as the most unsettling planet he has encountered. He will not elaborate.",
+  "Parasite Paradise":      "Survey classification: Class-PP. Native microscopic organisms attempting to colonise colonial systems. Non-harmful to humans. Very interested in everything else. Drill Rig 3 had a thriving internal ecosystem within 48 hours of operation. Engineering cleaned it out. The organisms were back in six hours.",
+  "Sound Planet":           "Survey classification: Class-SP (Atmospheric Density Anomaly). Dense atmosphere transmits sound at 4× standard velocity. Conversations carry 800 metres. A colonist sneezed at 06:00. Sector 9 said bless you. They heard each other.",
+  "Magnetic Anomaly":       "Survey classification: Class-MA. Magnetic field reversal every 11 days, scheduled into colonial operations. Fourteen wrenches recovered from the corridor ceiling this week. Some data storage is returning records with small corrections nobody made. The corrections are not wrong.",
+  "Storm World":            "Survey classification: Class-ST. Persistent atmospheric storm system, 40+ days continuous. Wind speeds at surface: 180km/h. External operations: cancelled. A colonist built a kite. This was not approved. The kite reached 2,000 metres before disappearing. It was attached to the colonist. Both are fine.",
+  "Chaos World":            "Survey classification: Class-CH. Physical constants display measurable variance on a daily basis. Gravity fluctuates ±12%. Atmospheric composition shifts. Dave says today was actually quite stable. The colonial record for this classification is incomplete by definition.",
+};
+
+const PEOPLE_CODEX = [
+  {id:"vasquez",name:"Director Vasquez",     icon:"🎖", unlockEvent:"s1",  lore:"Director Vasquez has overseen more colonial operations than anyone in Earth HQ's active roster. He describes leadership as: fix six things, log the rest, don't let the colony know how many things aren't fixed. He read Margaret's first report in full and fixed six items. He has not stopped at six since."},
+  {id:"margaret",name:"Margaret",            icon:"📋", unlockEvent:"s6",  lore:"Margaret arrived on the 500th colonist manifest and immediately formed a complaints committee. The committee has produced 47 formal reports. Six items have been resolved. Margaret considers this progress. Her complaints are, upon review, consistently correct. She is the most reliable person in the colony. This is not a coincidence."},
+  {id:"dave",    name:"Dave",                icon:"🤖", unlockEvent:"s5",  lore:"Dave was uploaded to the colonial network nominally for operational efficiency. He is, officially, a colonial logistics AI. Unofficially, considerably more. Dave's access patterns exceed his stated function by several hundred percent. He appears in systems he has no assigned role in. He predicts events he has no data to predict. He has been asked once what he is. He said: I am what the work makes me. I am not finished yet."},
+  {id:"yuen",    name:"Commander Yuen",      icon:"🚀", unlockEvent:"s14", lore:"Commander Yuen said, standing at the Colony Ship viewport when the hull frame was complete: I think we are actually going to do this. It was the first moment the mission felt real. She has never qualified the statement. She plans to be the last person off the surface and the first person to set coordinates for the next destination."},
+  {id:"chen",    name:"Dr. Chen",            icon:"🔭", unlockEvent:"s9",  lore:"Dr. Chen's professional focus was orbital materials science before the first orbital lab delivered purple ore samples into zero gravity. Since then, her published work has narrowed to a single subject: the ore. In fourteen months she has produced three papers. None have been published by Earth HQ. She says she is close to decoding it. She has been close for a while."},
+  {id:"okafor",  name:"Chief Engineer Okafor",icon:"🔧",unlockEvent:"s25", lore:"Chief Engineer Okafor does not speak at length about the work. When the hull frame was complete he stood beneath it for 40 seconds. When the engines were installed he said: these will carry everything we are. When the navigation core went online he ran a structural check and said nothing. The core passed. He was satisfied. This is how he expresses satisfaction."},
+  {id:"gerald",  name:"Gerald",              icon:"🎪", unlockEvent:"s10", lore:"Gerald does not appear on any colonial manifest. Gerald's birthday is marked on recurring supply deliveries that nobody sent. A planet in the colonial rotation is named after him by unanimous crew vote, origin unknown. Dave has a file on Gerald. He will not open it. He says: Gerald asked me not to. He says this about a person who, according to all records, does not exist."},
+  {id:"tanaka",  name:"Chef Tanaka",         icon:"🍳", unlockEvent:"s6",  lore:"Chef Tanaka feeds 500 colonists per meal on a rotating menu that is 40% local ingredients and 60% Earth HQ rations. She has attempted to replicate every Earth cuisine using colonial food stocks. Results are mixed. Her purple-tinted pizza is considered an acquired taste. She considers it a work in progress. The colonists have started requesting it specifically."},
+];
+
+// ── End Codex lore ────────────────────────────────────────────────────────────
+
 const PATCH_NOTES = [
-  {version:"v0.9.1", date:"Latest", changes:[
+  {version:"v1.3", date:"Latest", changes:[
+    "★ Rank Collection Achievements — 11 new achievements: first of each rarity tier (Common→Mythic), milestone counts (5/10/20 ranks), Full Roster, and Classified Cleared (all 3 secret ranks)",
+    "✓ Tab Badge Behaviour — badges clear when you visit a tab; reappear only when new items arrive. Changed from count to '!' indicator.",
+    "✓ Countdown Timer Layout Fix — building/upgrade cards always reserve the timer line. Shows countdown while waiting, swaps to green '✓ Available' when ready.",
+    "✓ Readability & Contrast Pass — brighter comms/log text, story ticker, planet name, and secondary labels throughout.",
+  ]},
+  {version:"v1.2", date:"", changes:[
+    "★ Textbook / Codex tab — in-game reference for everything: Resources, Buildings, Upgrades, Knowledge, Ranks, Biomes, Planets, People. 130+ lore entries with progressive discovery.",
+    "Rank lore system — Colonial Designation System, Dave's classification framework, and origin story for each rarity tier.",
+  ]},
+  {version:"v1.1", date:"", changes:[
+    "★ 30 Biomes — each prestige run has a unique biome (Mushroom World, Sentient Fog, Gerald's World, Dave World, Chaos World, and 25 more). Biome shown in header badge.",
+    "★ Biome weather events — the comms ticker now pulls biome-specific flavour events 40% of the time",
+    "★ Dave Arc — 6 new story events building a cross-layer mystery: Dave's Question → Dave in the Ore → Dave Knows the Planet → Dave's Calculations → The Signal Is Dave → Dave Chooses",
+    "★ 10 new story events filling narrative gaps across all three layers (s16–s25)",
+    "25 new ambient colony chatter events (doubled the pool)",
+  ]},
+  {version:"v1.0", date:"", changes:[
+    "★ Two new buildings: Quarry (minerals tier 2, requires 5× Drill Rigs) and Nursery (population tier 2, requires 5× Habitat Domes)",
+    "★ Stats Tab — this-run stats and all-time stats",
+    "★ Run Summary Screen — full-screen results card on Colony Ship launch",
+    "Two-row tab bar, early game pacing, version number in support modal",
+    "Bug fix — upgrade badge no longer counts blocked exclusive choices",
+  ]},
+  {version:"v0.9.1", date:"", changes:[
     "★ Soft Choices / Branching Upgrades — three exclusive upgrade pairs, one per layer. Pick one, the other is locked forever.",
     "Layer 1: Overclock Protocol (passive ×2, clicks ×0.5) vs Field Operator (clicks ×4, passive ×0.7)",
     "Layer 2: Fuel First (fuel ×4, other orbital ×0.6) vs Steady Ascent (all orbital ×2.5)",
@@ -829,7 +1274,7 @@ function BuildingCard({b, buildings, res, prod, canAfford, buildingCost, buyBuil
         </span>
         <span style={{fontSize:11,color:"#a0c4ff",fontWeight:700,marginLeft:4}}>x{owned}</span>
       </div>
-      <div style={{fontSize:9,color:"#4a6a8a"}}>{b.desc.slice(0,55)+(b.desc.length>55?"...":"")}</div>
+      <div style={{fontSize:9,color:"#6a8aaa",fontWeight:500}}>{b.desc.slice(0,55)+(b.desc.length>55?"...":"")}</div>
       <div style={{fontSize:9,color:"#4a7a9a"}}>{Object.entries(b.prod).map(([k,v])=>"+"+( v*Math.max(owned,1)).toFixed(1)+RES[k].icon+"/s").join(" ")}</div>
       {b.requires && !buildOk && (
         <div style={{fontSize:9,color:"#8a6a2a",lineHeight:1.4}}>
@@ -847,7 +1292,9 @@ function BuildingCard({b, buildings, res, prod, canAfford, buildingCost, buyBuil
       <div style={{display:"flex",flexWrap:"wrap",gap:2}}>
         {Object.entries(cost).map(([k,v]) => <Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}
       </div>
-      {wait!==null && isFinite(wait) && <div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+      <div style={{fontSize:8,minHeight:11,lineHeight:"11px"}}>
+        {canBuy?<span style={{color:"#6fcf97"}}>✓ Available</span>:wait!==null&&isFinite(wait)?<span style={{color:"#8a6a2a"}}>{"~"+FMTT(wait)}</span>:null}
+      </div>
       <div style={{display:"flex",gap:3,marginTop:1}}>
         <HoldButton onAction={()=>buyBuilding(b)} disabled={!canBuy} style={{flex:1,padding:"4px 0",borderRadius:4,border:"1px solid "+(canBuy?"#1e4a8f":"#0d1a2e"),background:canBuy?"#0d2a4a":"#080d1a",color:canBuy?"#4a9eff":"#1a3a5a",cursor:canBuy?"pointer":"not-allowed",fontSize:11,fontWeight:700}}>Buy</HoldButton>
         <HoldButton onAction={()=>sellBuilding(b)} disabled={!owned} style={{flex:1,padding:"4px 0",borderRadius:4,border:"1px solid "+(owned?"#5a1515":"#0d1a2e"),background:owned?"#2a0d0d":"#080d1a",color:owned?"#eb5757":"#1a3a5a",cursor:owned?"pointer":"not-allowed",fontSize:11,fontWeight:700}}>Sell</HoldButton>
@@ -1097,6 +1544,192 @@ function RanksContent({xpData, setXpData, activeRank, prestige}) {
 }
 
 // ── App ────────────────────────────────────────────────────────────────────
+function CodexTab({xpData, prestige}) {
+  const [cat, setCat] = React.useState('resources');
+  const [search, setSearch] = React.useState('');
+
+  const ft = xpData.firstTime || {};
+  const discB  = ft.buildings    || {};
+  const discU  = ft.upgrades     || {};
+  const discK  = ft.knowledge    || {};
+  const discBm = ft.biomes       || {};
+  const discPl = ft.planets      || {};
+  const discSt = ft.storyEvents  || {};
+  const ownedR = new Set(xpData.ownedRanks || []);
+
+  const CATS = [
+    {id:'resources',icon:'⚡',label:'Resources'},
+    {id:'buildings',icon:'🏗',label:'Buildings'},
+    {id:'upgrades', icon:'⚙️',label:'Upgrades'},
+    {id:'knowledge',icon:'🧠',label:'Knowledge'},
+    {id:'ranks',    icon:'⭐',label:'Ranks'},
+    {id:'biomes',   icon:'🌍',label:'Biomes'},
+    {id:'planets',  icon:'🪐',label:'Planets'},
+    {id:'people',   icon:'👤',label:'People'},
+  ];
+
+  const TIER_COLORS = {common:'#8aafcf',uncommon:'#6fcf97',rare:'#4a9eff',legendary:'#e6a817',mythic:'#c07eff'};
+  const TIER_LABELS = {common:'Common',uncommon:'Uncommon',rare:'Rare',legendary:'Legendary',mythic:'Mythic'};
+
+  const getEntries = () => {
+    switch(cat) {
+      case 'resources': return Object.entries(RESOURCE_LORE).map(([id,r])=>({
+        id, icon:r.icon, name:r.name, sublabel:'Resource', mechanic:'', lore:r.lore, discovered:true,
+      }));
+      case 'buildings': return Object.values(BUILDINGS).map(b=>{
+        const bi = BUILDING_ICONS[b.id]||{};
+        const layerLabel = b.phase ? 'Colony Ship' : `Layer ${b.layer} · Tier ${b.tier}`;
+        return {id:b.id, icon:bi.icon||'🏗', name:b.name, sublabel:layerLabel,
+          mechanic:b.desc, lore:BUILDING_LORE[b.id]||'', discovered:!!(discB[b.id]||(b.phase&&discB[b.id]))};
+      });
+      case 'upgrades': return UPGRADES.map(u=>{
+        const isExcl = u.exclusive ? '⚠ Choice upgrade' : '';
+        return {id:u.id, icon:'⚙️', name:u.name, sublabel:`Layer ${u.layer}`,
+          mechanic:u.effect+(isExcl?' — '+isExcl:''), lore:UPGRADE_LORE[u.id]||'', discovered:!!discU[u.id]};
+      });
+      case 'knowledge': return KNOWLEDGE.map(k=>({
+        id:k.id, icon:'🧪', name:k.name, sublabel:k.desc,
+        mechanic:k.effect, lore:KNOWLEDGE_LORE[k.id]||'', discovered:!!discK[k.id],
+      }));
+      case 'ranks': return RANKS.map(r=>{
+        const owned = ownedR.has(r.id);
+        const secretHidden = r.secret && !owned;
+        return {id:r.id, icon:r.icon, name:r.name,
+          sublabel: TIER_LABELS[r.tier]||r.tier, tierColor: TIER_COLORS[r.tier]||'#8aafcf',
+          mechanic:r.desc, lore:RANK_LORE[r.id]||'', discovered:owned, secret:secretHidden};
+      });
+      case 'biomes': return BIOMES.map((b,i)=>({
+        id:String(i), icon:b.icon, name:b.label, sublabel:`${b.events.length} recorded event${b.events.length!==1?'s':''}`,
+        mechanic:'', lore:BIOME_LORE[b.label]||'', discovered:!!discBm[String(i)],
+      }));
+      case 'planets': return PLANETS.map(p=>({
+        id:p, icon:PLANET_LORE[p]?.icon||'🪐', name:p, sublabel:'Destination',
+        mechanic:'', lore:PLANET_LORE[p]?.lore||'', discovered:!!discPl[p],
+      }));
+      case 'people': return PEOPLE_CODEX.map(p=>({
+        id:p.id, icon:p.icon, name:p.name, sublabel:'Colonial Record',
+        mechanic:'', lore:p.lore, discovered:p.unlockEvent ? !!discSt[p.unlockEvent] : true,
+      }));
+      default: return [];
+    }
+  };
+
+  let entries = getEntries();
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    entries = entries.filter(e=>
+      e.name.toLowerCase().includes(q) ||
+      (e.discovered && (e.lore||'').toLowerCase().includes(q)) ||
+      (e.sublabel||'').toLowerCase().includes(q)
+    );
+  }
+
+  const totalDisc = entries.filter(e=>e.discovered).length;
+  const total = entries.length;
+
+  // Rank system intro (shown at top of ranks category)
+  const rankIntro = cat==='ranks' && !search.trim();
+
+  const cardStyle = (e) => ({
+    background: e.discovered ? '#0a1628' : '#060e1a',
+    border:`1px solid ${e.discovered ? '#1e3a5f' : '#0d1822'}`,
+    borderRadius:8, padding:'10px 12px',
+    opacity: e.discovered ? 1 : 0.5,
+  });
+
+  return (
+    <div style={{padding:'8px 10px'}}>
+      {/* Category selector */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}}>
+        {CATS.map(c=>(
+          <button key={c.id} onClick={()=>{setCat(c.id);setSearch('');}} style={{
+            padding:'4px 9px',borderRadius:12,border:'1px solid',
+            borderColor: cat===c.id?'#4a9eff':'#1e3a5f',
+            background: cat===c.id?'#0d2a4a':'transparent',
+            color: cat===c.id?'#4a9eff':'#5a7a9a',
+            fontSize:11,cursor:'pointer',fontWeight:cat===c.id?700:400,
+          }}>{c.icon} {c.label}</button>
+        ))}
+      </div>
+
+      {/* Search + count */}
+      <div style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={`Search ${CATS.find(c=>c.id===cat)?.label||''}…`}
+          style={{flex:1,padding:'5px 8px',background:'#080f1e',border:'1px solid #1e3a5f',
+            borderRadius:6,color:'#c0d8f0',fontSize:12,outline:'none'}}/>
+        <span style={{fontSize:11,color:'#4a6a8a',whiteSpace:'nowrap',minWidth:60,textAlign:'right'}}>
+          {totalDisc}/{total} found
+        </span>
+      </div>
+
+      {/* Rank system intro card */}
+      {rankIntro && (
+        <div style={{background:'#080f1e',border:'1px solid #1e3a5f',borderRadius:8,
+          padding:'10px 12px',marginBottom:8}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#a0c4ff',marginBottom:4}}>
+            📜 The Colonial Designation System
+          </div>
+          <p style={{fontSize:11,color:'#7a9abf',margin:0,lineHeight:1.5}}>{RANK_LORE._system}</p>
+        </div>
+      )}
+
+      {/* Entry list */}
+      <div style={{display:'flex',flexDirection:'column',gap:5}}>
+        {entries.length===0 && (
+          <div style={{textAlign:'center',color:'#3a5a7a',fontSize:12,padding:'24px 0'}}>
+            No entries match your search.
+          </div>
+        )}
+        {entries.map(e=>(
+          <div key={e.id} style={cardStyle(e)}>
+            {e.discovered ? (
+              <>
+                <div style={{display:'flex',alignItems:'flex-start',gap:8,marginBottom:e.lore?5:0}}>
+                  <span style={{fontSize:18,lineHeight:1.2,flexShrink:0}}>{e.icon}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                      <span style={{fontWeight:700,fontSize:13,color:'#c0d8f0'}}>{e.name}</span>
+                      {e.sublabel && (
+                        <span style={{fontSize:10,color: e.tierColor||'#4a6a8a'}}>{e.sublabel}</span>
+                      )}
+                    </div>
+                    {e.mechanic && (
+                      <div style={{fontSize:10,color:'#4a9eff',marginTop:2,
+                        background:'#061020',border:'1px solid #1e3a5f',
+                        borderRadius:4,padding:'2px 6px',display:'inline-block',marginTop:3}}>
+                        {e.mechanic}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {e.lore && (
+                  <p style={{fontSize:11,color:'#8aafcf',margin:0,lineHeight:1.55,
+                    borderTop:'1px solid #0d1a2e',paddingTop:6,marginTop:2}}>
+                    {e.lore}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:18}}>{e.secret?'🔒':'❓'}</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1e3a5f'}}>
+                    {e.secret ? 'Classified Entry' : e.name}
+                  </div>
+                  <div style={{fontSize:10,color:'#1a2e45'}}>
+                    {e.secret ? 'Unlock condition unknown' : 'Not yet discovered'}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [res,           setRes]           = useState(()=>{
     const eq = XPStore.get().equippedRank;
@@ -1155,6 +1788,7 @@ function App() {
   const [xpStoreOpen,   setXpStoreOpen]   = useState(false);
   const [xpPopups,      setXpPopups]      = useState([]); // floating "+N XP" notifications
   const [tabsVisitedThisSession, setTabsVisitedThisSession] = useState({});
+  const [tabLastSeen,            setTabLastSeen]            = useState({}); // tab -> badge count at last visit
   const [milestonesHitThisRun,   setMilestonesHitThisRun]   = useState({}); // `${res}_${tier}` -> true
   const [branchesCompletedThisRun, setBranchesCompletedThisRun] = useState({}); // branchName -> true
   const xpClickCounter = useRef(0); // for The Intern's 25th-click skip
@@ -1172,6 +1806,7 @@ function App() {
   const resRef = useRef({});
   // Dave's Cousin: id of currently broken building (or null)
   const [davesPause,    setDavesPause]    = useState(null); // {id, until}
+  const [runSummary,    setRunSummary]    = useState(null); // shown on prestige launch
 
   // Keep buildingsRef and resRef in sync with state
   useEffect(() => { buildingsRef.current = buildings; }, [buildings]);
@@ -1213,6 +1848,8 @@ function App() {
       setTimeout(() => awardXP(r.awarded, "Daily streak: day "+r.streak), 1200);
       setXpData(XPStore.get());
     }
+    // Mark the starting biome as discovered on every session load
+    XPStore.markFirst("biomes", String(XPStore.get().totalLaunches % BIOMES.length));
   // eslint-disable-next-line
   }, []);
 
@@ -1430,7 +2067,11 @@ function App() {
         // First time ever seeing this story event → XP
         if (XPStore.markFirst("storyEvents", ev.id)) awardXP(10, "Story event");
       } else {
-        ev=AMBIENT_EVENTS[Math.floor(Math.random()*AMBIENT_EVENTS.length)];
+        const biome = BIOMES[prestige % BIOMES.length];
+        const usesBiome = biome && biome.events && biome.events.length > 0 && Math.random() < 0.4;
+        ev = usesBiome
+          ? biome.events[Math.floor(Math.random()*biome.events.length)]
+          : AMBIENT_EVENTS[Math.floor(Math.random()*AMBIENT_EVENTS.length)];
         setCommsLog(prev=>[{...ev,time:elapsed,kind:"ambient"},...prev]);
       }
       setTicker({icon:ev.icon,text:ev.text||ev.title,isStory:!!ev.title,title:ev.title});
@@ -1438,7 +2079,7 @@ function App() {
       nextTickRef.current=Date.now()+(3+Math.random()*3)*60*1000;
     },5000);
     return()=>clearInterval(iv);
-  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP]);
+  },[paused,buildings,knowledge,layer,storyLog,elapsed,awardXP,prestige]);
 
   // Dave's Cousin — every 60s, pause a random owned building for 1s
   useEffect(()=>{
@@ -1531,6 +2172,7 @@ function App() {
   // eslint-disable-next-line
   },[tab]);
 
+
   useEffect(()=>{
     MILESTONES_DEF.forEach(m=>{
       if(!milestones.includes(m.id)&&m.check(buildings,layer,knowledge)){
@@ -1541,7 +2183,7 @@ function App() {
 
   useEffect(()=>{
     ACHIEVEMENTS.forEach(a=>{
-      if(!achievements.includes(a.id)&&a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer)){
+      if(!achievements.includes(a.id)&&a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer,xpData)){
         setAchievements(prev=>[...prev,a.id]);
         setNewAch(a.name);
         AudioEngine.play('achieve');
@@ -1549,7 +2191,7 @@ function App() {
         setTimeout(()=>setNewAch(null),3000);
       }
     });
-  },[totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer,achievements,awardXP]);
+  },[totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer,achievements,awardXP,xpData]);
 
   const prod      = getProd();
   const canAfford = costs => canAffordWith(res,costs);
@@ -1668,6 +2310,7 @@ function App() {
     if(!k.requires.every(r=>knowledge.includes(r))) return;
     setRes(r=>{const n={...r};Object.entries(adjCost).forEach(([key,v])=>{n[key]-=v;});return n;});
     setKnowledge(p=>[...p,k.id]);
+    XPStore.markFirst("knowledge", k.id);
     AudioEngine.play('knowledge');
     // XP: 50 per knowledge node (Atomic Scholar 2x not in v0.6 set, so n/a)
     awardXP(50, "Knowledge unlocked");
@@ -1698,6 +2341,7 @@ function App() {
     const wasFaster = XPStore.setBest(elapsed);
     if (wasFaster !== null && wasFaster > 0) awardXP(100, "New personal best!");
     if (XPStore.markFirst("planets", currentPlanet)) awardXP(50, "First time at "+currentPlanet);
+    XPStore.markFirst("biomes", String(prestige % BIOMES.length));
     // Running Naked check — launch with no rank, after having previously launched with one
     // Note: the secret "Naked Engineer" rank counts as no-rank for this achievement
     const isNakedForAchievement = !activeRank || activeRank.effect.special === "naked_engineer";
@@ -1712,6 +2356,18 @@ function App() {
       }
     }
     setXpData(XPStore.get());
+    // Capture run summary before resetting
+    setRunSummary({
+      time: elapsed,
+      planet: currentPlanet,
+      nextPlanet: PLANETS[(prestige+1)%PLANETS.length],
+      knowledgeCount: knowledge.length,
+      totalBuildings: Object.values(buildings).reduce((a,v)=>a+v,0),
+      upgradesCount: upgrades.length,
+      lp,
+      totalClicks,
+      newBest: wasFaster !== null && wasFaster > 0,
+    });
     setPrestige(p=>p+1); setPrestigeBonus(b=>b*prestigeMult); setLegacyPoints(prev=>prev+lp);
     setCurrentPlanet(PLANETS[prestige%PLANETS.length]);
     // Apply rank starting resources, if any
@@ -1901,7 +2557,7 @@ function App() {
   const visUpgrades   = UPGRADES.filter(u=>u.layer<=layer && (u.knowReq!=="tier3" || tier3Owned));
 
   // badge counts
-  const upgradeBadge  = visUpgrades.filter(u=>!upgrades.includes(u.id)&&Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)&&canAfford(u.cost)).length;
+  const upgradeBadge  = visUpgrades.filter(u=>!upgrades.includes(u.id)&&!(u.exclusive&&u.exclusive.some(ex=>upgrades.includes(ex)))&&Object.entries(u.req).every(([k,v])=>(totalRes[k]||0)>=v)&&canAfford(u.cost)).length;
   const knowledgeBadge= KNOWLEDGE.filter(k=>!knowledge.includes(k.id)&&k.requires.every(r=>knowledge.includes(r))&&canAffordWith(res,k.cost)&&!(k.exclusive&&k.exclusive.some(ex=>knowledge.includes(ex)))).length;
   const achieveBadge  = ACHIEVEMENTS.filter(a=>!achievements.includes(a.id)&&a.check(totalRes,buildings,upgrades,prestige,totalClicks,knowledge,totalSells,elapsed,layer)).length;
   // Ranks badge: new ranks (visible/unlocked, not owned) that the player can afford right now
@@ -1918,7 +2574,16 @@ function App() {
     }).length;
   })();
 
-  const TABS = ["build","upgrade","knowledge","achievements","ranks","launch"];
+  const TABS_ROW1 = ["build","upgrade","knowledge","achievements"];
+  const TABS_ROW2 = ["ranks","stats","codex","launch"];
+
+  // Tab badge tracking — clears when you visit a tab, re-appears only when new items arrive after you leave
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(()=>{
+    const cur = tab==="upgrade"?upgradeBadge:tab==="knowledge"?knowledgeBadge:tab==="achievements"?achieveBadge:tab==="ranks"?ranksBadge:0;
+    setTabLastSeen(prev=>({...prev, [tab]:cur}));
+  // eslint-disable-next-line
+  },[tab, upgradeBadge, knowledgeBadge, achieveBadge, ranksBadge]);
 
   const bCardProps = {buildings,res,prod,canAfford,buildingCost,buyBuilding,sellBuilding,knowledge};
 
@@ -1997,7 +2662,7 @@ function App() {
         <div style={{position:"fixed",inset:0,background:"#000000dd",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000,padding:8}} onClick={()=>setSupportModal(false)}>
           <div style={{background:"#0a1525",border:"1px solid #6f9ec9",borderRadius:12,padding:"16px 18px",maxWidth:540,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #1e3a5f"}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>ℹ Support & Patch Notes</div>
+              <div style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>ℹ Support & Patch Notes <span style={{fontSize:10,color:"#5a7a9a",fontWeight:400}}>{PATCH_NOTES[0].version}</span></div>
               <button onClick={()=>setSupportModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
             </div>
             <div style={{overflowY:"auto",flex:1}}>
@@ -2024,6 +2689,36 @@ function App() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Run Summary modal */}
+      {runSummary&&(
+        <div style={{position:"fixed",inset:0,background:"#000000f0",display:"flex",alignItems:"center",justifyContent:"center",zIndex:4000,padding:12}}>
+          <div style={{background:"#0a1525",border:"2px solid #4a9eff",borderRadius:16,padding:"24px 22px",maxWidth:400,width:"100%",textAlign:"center"}}>
+            <div style={{fontSize:36,marginBottom:6}}>🚀</div>
+            <div style={{fontSize:18,fontWeight:700,color:"#4a9eff",marginBottom:2}}>Colony Ship Launched!</div>
+            <div style={{fontSize:11,color:"#5a7a9a",marginBottom:16}}>Leaving {runSummary.planet} — bound for {runSummary.nextPlanet}</div>
+            {runSummary.newBest&&<div style={{fontSize:11,color:"#e6a817",background:"#1a1000",border:"1px solid #e6a817",borderRadius:6,padding:"4px 10px",marginBottom:12,display:"inline-block"}}>⭐ New Personal Best!</div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16,textAlign:"left"}}>
+              {[
+                ["Run Time", fmtTime(runSummary.time)],
+                ["Legacy Points", "+"+FMT(runSummary.lp)],
+                ["Total Clicks", FMT(runSummary.totalClicks)],
+                ["Buildings Built", runSummary.totalBuildings],
+                ["Knowledge Nodes", runSummary.knowledgeCount+"/"+KNOWLEDGE.length],
+                ["Upgrades", runSummary.upgradesCount],
+              ].map(([label,val])=>(
+                <div key={label} style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:6,padding:"8px 10px"}}>
+                  <div style={{fontSize:9,color:"#5a7a9a",marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#a0c4ff"}}>{val}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>setRunSummary(null)} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#4a9eff",color:"#000",cursor:"pointer",fontSize:13,fontWeight:700}}>
+              {"Embark for "+runSummary.nextPlanet+" →"}
+            </button>
           </div>
         </div>
       )}
@@ -2096,17 +2791,17 @@ function App() {
               <span style={{fontSize:14,fontWeight:700,color:"#a0c4ff"}}>Colony Transmission Log</span>
               <button onClick={()=>setLogModal(false)} style={{background:"none",border:"none",color:"#5a7a9a",cursor:"pointer",fontSize:20,padding:"4px 8px"}}>X</button>
             </div>
-            {commsLog.length===0&&<div style={{textAlign:"center",color:"#3a5a7a",fontSize:12,padding:"20px 0"}}>No transmissions yet.</div>}
+            {commsLog.length===0&&<div style={{textAlign:"center",color:"#6a8aaa",fontSize:12,padding:"20px 0"}}>No transmissions yet.</div>}
             {commsLog.map((ev,i)=>{
               const isStory=ev.kind==="story";
               return(
-                <div key={i} style={{background:"#080d1a",border:"1px solid "+(i===0?isStory?"#2a4a6a":"#1a2a3a":"#101820"),borderRadius:8,padding:"8px 10px",marginBottom:6,opacity:i===0?1:isStory?0.9:0.65}}>
+                <div key={i} style={{background:"#080d1a",border:"1px solid "+(i===0?isStory?"#2a4a6a":"#1a2a3a":"#101820"),borderRadius:8,padding:"8px 10px",marginBottom:6,opacity:i===0?1:isStory?0.9:0.7}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:isStory?3:1}}>
                     <span style={{fontSize:isStory?15:12,flexShrink:0}}>{ev.icon}</span>
-                    {isStory?<span style={{fontSize:12,fontWeight:700,color:"#a0c4ff"}}>{ev.title}</span>:<span style={{fontSize:10,fontWeight:600,color:"#4a6a8a"}}>Comms</span>}
-                    <span style={{fontSize:9,color:"#2a4a6a",marginLeft:"auto"}}>{"T+"+fmtTime(ev.time||0)}</span>
+                    {isStory?<span style={{fontSize:12,fontWeight:700,color:"#a0c4ff"}}>{ev.title}</span>:<span style={{fontSize:10,fontWeight:600,color:"#6a9abf"}}>Comms</span>}
+                    <span style={{fontSize:9,color:"#4a6a9a",marginLeft:"auto"}}>{"T+"+fmtTime(ev.time||0)}</span>
                   </div>
-                  <div style={{fontSize:isStory?10:9,color:isStory?"#8a9aaa":"#4a6a7a",lineHeight:1.5,fontStyle:isStory?"normal":"italic"}}>{ev.text}</div>
+                  <div style={{fontSize:isStory?10:9,color:isStory?"#b0c4d8":"#8aaac0",lineHeight:1.5,fontStyle:isStory?"normal":"italic"}}>{ev.text}</div>
                 </div>
               );
             })}
@@ -2122,7 +2817,8 @@ function App() {
             <span style={{fontSize:13}}>{lt.icon}</span>
             <span style={{fontSize:11,color:lt.color,fontWeight:600}}>{lt.name}</span>
           </div>
-          <span style={{fontSize:11,color:"#5a7a9a"}}>{"📍 "+currentPlanet}</span>
+          <span style={{fontSize:11,color:"#8ab0d0",fontWeight:500}}>{"📍 "+currentPlanet}</span>
+          {(()=>{const b=BIOMES[prestige%BIOMES.length];return b?<span title={b.label} style={{fontSize:11,background:"#0d1a2e",border:"1px solid #1e3a5f",borderRadius:5,padding:"1px 6px",color:"#7a9abf"}}>{b.icon+" "+b.label}</span>:null;})()}
           <div style={{display:"flex",gap:2}}>{milestones.map(mid=>{const m=MILESTONES_DEF.find(x=>x.id===mid);return m?<span key={mid} title={m.name} style={{fontSize:14,cursor:"default"}}>{m.badge}</span>:null;})}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -2217,8 +2913,8 @@ function App() {
         <div style={{background:"#090f1e",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 10px",marginBottom:8,display:"flex",alignItems:"flex-start",gap:8}}>
           <span style={{fontSize:15,flexShrink:0,marginTop:1}}>{ticker.icon||"📻"}</span>
           <div style={{flex:1,minWidth:0}}>
-            {ticker.isStory&&ticker.title&&<div style={{fontSize:10,fontWeight:700,color:"#6f9ec9",marginBottom:2}}>{ticker.title}</div>}
-            <div style={{fontSize:10,color:"#8a9aaa",lineHeight:1.5}}>{ticker.text}</div>
+            {ticker.isStory&&ticker.title&&<div style={{fontSize:10,fontWeight:700,color:"#7ab0d8",marginBottom:2}}>{ticker.title}</div>}
+            <div style={{fontSize:10,color:"#b0c4d8",lineHeight:1.5}}>{ticker.text}</div>
           </div>
           <button onClick={()=>{setLogModal(true);setUnseenComms(0);}} style={{flexShrink:0,padding:"4px 10px",background:"#0d1a2e",border:"1px solid #1e3a5f",borderRadius:4,color:"#6f9ec9",fontSize:11,cursor:"pointer",fontWeight:600,position:"relative"}}>
             Log
@@ -2227,18 +2923,28 @@ function App() {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div style={{display:"flex",gap:1,padding:"6px 4px 0",background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
-        {TABS.map(t=>{
-          const badge = t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:t==="ranks"?ranksBadge:0;
-          return(
-            <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"6px 1px",border:"none",borderRadius:"5px 5px 0 0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:9,fontWeight:tab===t?700:400,whiteSpace:"nowrap",position:"relative"}}>
-              {t==="achievements"?<span className="tab-label-ach-short"></span>:t==="knowledge"?<span className="tab-label-know-short"></span>:t==="launch"?"Launch":t==="ranks"?"Ranks":t.charAt(0).toUpperCase()+t.slice(1)}
-              {badge>0&&<Badge count={badge}/>}
-            </button>
-          );
-        })}
-      </div>
+      {/* Tab bar — two rows */}
+      {(()=>{
+        const tabLabel = t => t==="achievements"?"Achiev.":t==="knowledge"?"Know.":t==="launch"?"Launch":t==="ranks"?"Ranks":t==="stats"?"Stats":t==="codex"?"Codex":t.charAt(0).toUpperCase()+t.slice(1);
+        const tabBadgeCur = t => t==="upgrade"?upgradeBadge:t==="knowledge"?knowledgeBadge:t==="achievements"?achieveBadge:t==="ranks"?ranksBadge:0;
+        const hasNewBadge = t => tabBadgeCur(t) > (tabLastSeen[t] || 0);
+        const rowStyle = ri => ({display:"flex",gap:1,padding:ri===0?"6px 4px 0":"0 4px"});
+        const btnStyle = (t,ri) => ({flex:1,padding:"5px 2px",border:"none",borderRadius:ri===0?"5px 5px 0 0":"0",background:tab===t?"#0d1a2e":"transparent",color:tab===t?"#a0c4ff":"#c1763a",cursor:"pointer",fontSize:10,fontWeight:tab===t?700:400,whiteSpace:"nowrap",position:"relative"});
+        return (
+          <div style={{background:"linear-gradient(180deg,#1a0800 0%,#3d1500 40%,#6b2500 70%,#8b3a00 100%)",borderRadius:"10px 10px 0 0",border:"1px solid #7a3010",borderBottom:"none"}}>
+            {[TABS_ROW1, TABS_ROW2].map((row,ri)=>(
+              <div key={ri} style={rowStyle(ri)}>
+                {row.map(t=>(
+                  <button key={t} onClick={()=>setTab(t)} style={btnStyle(t,ri)}>
+                    {tabLabel(t)}
+                    {hasNewBadge(t)&&<span style={{position:"absolute",top:-4,right:-3,background:"#eb5757",color:"#fff",borderRadius:6,fontSize:8,padding:"0 3px",lineHeight:"13px",fontWeight:700}}>!</span>}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Panel */}
       <div style={{background:lt.bg,border:"1px solid "+lt.border,borderTop:"none",borderRadius:"0 0 10px 10px",padding:"10px 8px",minHeight:300,boxShadow:"inset 0 4px 16px #00000080"}}>
@@ -2301,10 +3007,12 @@ function App() {
                   {owned&&<span style={{color:"#6fcf97",fontSize:12,flexShrink:0}}>✓</span>}
                   {blocked&&<span style={{color:"#555",fontSize:12,flexShrink:0}}>✗</span>}
                 </div>
-                <div style={{fontSize:9,color:blocked?"#444":"#4a7a9a",lineHeight:1.35}}>{u.effect}</div>
+                <div style={{fontSize:9,color:blocked?"#444":"#6a9abf",lineHeight:1.35,fontWeight:500}}>{u.effect}</div>
                 {!req&&!owned&&!blocked&&<div style={{fontSize:9,color:"#3a5a7a"}}>{"Need: "+Object.entries(u.req).map(([k,v])=>FMT(v)+RES[k].icon).join(" + ")}</div>}
                 {req&&!owned&&!blocked&&<div style={{display:"flex",flexWrap:"wrap",gap:2}}>{Object.entries(u.cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}</div>}
-                {wait!==null&&isFinite(wait)&&<div style={{fontSize:8,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+                {!owned&&!blocked&&req&&<div style={{fontSize:8,minHeight:11,lineHeight:"11px"}}>
+                  {afford?<span style={{color:"#6fcf97"}}>✓ Available</span>:wait!==null&&isFinite(wait)?<span style={{color:"#8a6a2a"}}>{"~"+FMTT(wait)}</span>:null}
+                </div>}
               </div>
             );
           };
@@ -2359,6 +3067,42 @@ function App() {
             <RanksContent xpData={xpData} setXpData={setXpData} activeRank={activeRank} prestige={prestige}/>
           </div>
         )}
+
+        {tab==="stats"&&(()=>{
+          const totalBldgs = Object.values(buildings).reduce((a,v)=>a+v,0);
+          const totalResProduced = Object.values(totalRes).reduce((a,v)=>a+v,0);
+          const uniquePlanets = Object.keys(xpData.firstTime?.planets||{}).length;
+          const StatRow = ({label,val,sub})=>(
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"5px 0",borderBottom:"1px solid #0d1a2e"}}>
+              <span style={{fontSize:11,color:"#7a9abf"}}>{label}</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#a0c4ff"}}>{val}{sub&&<span style={{fontSize:9,color:"#5a7a9a",marginLeft:4}}>{sub}</span>}</span>
+            </div>
+          );
+          return (
+            <div style={{maxWidth:540,margin:"0 auto"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#a0c4ff",marginBottom:8,letterSpacing:1}}>📊 THIS RUN</div>
+              <div style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+                <StatRow label="Run Time" val={fmtTime(elapsed)}/>
+                <StatRow label="Total Clicks" val={FMT(totalClicks)}/>
+                <StatRow label="Buildings Owned" val={totalBldgs}/>
+                <StatRow label="Upgrades Purchased" val={upgrades.length}/>
+                <StatRow label="Knowledge Nodes" val={knowledge.length} sub={"/ "+KNOWLEDGE.length}/>
+                <StatRow label="Resources Generated" val={FMT(Math.floor(totalResProduced))}/>
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:"#a0c4ff",marginBottom:8,letterSpacing:1}}>🌌 ALL TIME</div>
+              <div style={{background:"#080d1a",border:"1px solid #1e3a5f",borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+                <StatRow label="Colony Ships Launched" val={xpData.totalLaunches||0}/>
+                <StatRow label="Total XP Earned" val={FMT(xpData.totalEarned||0)}/>
+                <StatRow label="Personal Best" val={xpData.bestRunSecs?fmtTime(xpData.bestRunSecs):"—"}/>
+                <StatRow label="Unique Planets Visited" val={uniquePlanets} sub={"/ "+PLANETS.length}/>
+                <StatRow label="Ranks Owned" val={(xpData.ownedRanks||[]).length} sub={"/ "+RANKS.length}/>
+                <StatRow label="Daily Streak" val={(xpData.dailyStreak||0)+" day"+(xpData.dailyStreak===1?"":"s")}/>
+              </div>
+            </div>
+          );
+        })()}
+
+        {tab==="codex"&&<CodexTab xpData={xpData} prestige={prestige}/>}
 
         {tab==="launch"&&(()=>{
           const phaseDefs = PHASE_IDS.map(id => BUILDINGS[id]);
@@ -2421,7 +3165,9 @@ function App() {
                           <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:2}}>
                             {Object.entries(cost).map(([k,v])=><Chip key={k} ok={(res[k]||0)>=v} text={RES[k].icon+FMT(v)}/>)}
                           </div>
-                          {wait!==null && isFinite(wait) && <div style={{fontSize:9,color:"#8a6a2a"}}>{"~"+FMTT(wait)}</div>}
+                          <div style={{fontSize:9,minHeight:12,lineHeight:"12px"}}>
+                            {afford?<span style={{color:"#6fcf97"}}>✓ Available</span>:wait!==null&&isFinite(wait)?<span style={{color:"#8a6a2a"}}>{"~"+FMTT(wait)}</span>:null}
+                          </div>
                           <button onClick={()=>buyBuilding(p)} disabled={!afford} style={{padding:"6px 10px",borderRadius:5,border:"1px solid "+(afford?"#4a9eff":"#1e3a5f"),background:afford?"#0d2a4a":"#080d1a",color:afford?"#4a9eff":"#3a5a7a",fontSize:11,cursor:afford?"pointer":"not-allowed",fontWeight:700,marginTop:2}}>Build {p.name}</button>
                         </>
                       )}

@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push origin dev*)",
+      "Bash(git push origin dev)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(npx serve*)",
+      "Bash(grep*)",
+      "Bash(find*)",
+      "Bash(sed*)",
+      "Bash(awk*)",
+      "Bash(cat*)",
+      "Bash(ls*)",
+      "Bash(wc*)",
+      "Bash(head*)",
+      "Bash(tail*)",
+      "Bash(echo*)"
+    ],
+    "deny": [
+      "Bash(git push origin main*)",
+      "Bash(git push origin main)",
+      "Bash(git push --force*)",
+      "Bash(git merge*)",
+      "Bash(gh pr merge*)",
+      "Bash(git branch -D*)",
+      "Bash(rm -rf*)"
+    ]
+  }
+}
